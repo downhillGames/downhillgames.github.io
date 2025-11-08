@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="n64js.css" />
 </head>
-
 <body>
   <h1>n64js - Hello NGine - <span id="mspf">…</span>mspf</h1>
   <p>An n64 emulator. <a href="https://github.com/hulkholden/n64js">Info</a></p>
@@ -17,27 +16,10 @@
     <button id="btn-fullscreen">Fullscreen</button>
     <button id="btn-debug">Debug</button>
     <button id="btn-perf">Perf</button>
-    <label><input id="theme-toggle" type="checkbox" /> Theme</label>
-    <div>
-      <label><input name="theme" type="radio" value="light" /> Light</label>
-      <label><input name="theme" type="radio" value="dark" /> Dark</label>
-      <label><input name="theme" type="radio" value="auto" checked /> Auto</label>
-    </div>
   </div>
 
-  <div id="canvas-container">
-    <canvas id="display-canvas" width="640" height="480"></canvas>
-  </div>
+  <canvas id="display-canvas" width="640" height="480" style="background:#000;border:1px solid #444"></canvas>
 
-  <div id="footer">
-    <p>By <a href="https://github.com/hulkholden">@HulkHolden</a>.
-      <a href="https://hulkholden.github.io/">Blog</a>.
-      <a href="https://github.com/hulkholden/n64js">Code</a>.
-      <a href="https://www.youtube.com/@hulkholden">Videos</a>.
-    </p>
-  </div>
-
-  <!-- Required emulator scripts (paths match your repo layout) -->
   <script src="js/jquery.min.js"></script>
   <script src="js/md5.js"></script>
   <script src="js/stats.js"></script>
@@ -45,85 +27,49 @@
   <script src="build/n64.min.js"></script>
 
   <script>
-    (function () {
-      // ----- Helpers ---------------------------------------------------------
-      function getQueryParam(name) {
-        const m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
-        return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
-      }
+    // --- helpers ---
+    function qp(name) {
+      const m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+    }
 
-      function setThemeFromRadio() {
-        const selected = document.querySelector('input[name="theme"]:checked').value;
-        document.documentElement.dataset.theme = selected;
-      }
+    document.addEventListener('DOMContentLoaded', () => {
+      // IMPORTANT: tell n64js where to find its files (workers, etc.)
+      // Using "./" since index.html, build/, js/, roms/ are siblings.
+      n64js.setRootPath('./');
 
-      // ----- UI wiring -------------------------------------------------------
-      document.getElementById('btn-fullscreen').addEventListener('click', () => n64js.ui().toggleFullscreen());
-      document.getElementById('btn-pause').addEventListener('click', () => n64js.ui().togglePause());
-      document.getElementById('btn-debug').addEventListener('click', () => n64js.ui().toggleDebug());
-      document.getElementById('btn-perf').addEventListener('click', () => n64js.ui().togglePerf());
+      // Init emulator
+      n64js.init();
 
-      document.getElementById('btn-load').addEventListener('click', async () => {
+      // Show perf mspf like the demo
+      const mspf = document.getElementById('mspf');
+      n64js.setPerfCallback(ms => { mspf.textContent = Math.round(ms); });
+
+      // Wire up UI buttons
+      document.getElementById('btn-fullscreen').onclick = () => n64js.ui().toggleFullscreen();
+      document.getElementById('btn-pause').onclick      = () => n64js.ui().togglePause();
+      document.getElementById('btn-debug').onclick      = () => n64js.ui().toggleDebug();
+      document.getElementById('btn-perf').onclick       = () => n64js.ui().togglePerf();
+      document.getElementById('btn-load').onclick       = async () => {
         try {
-          const fileHandle = await window.showOpenFilePicker({
-            types: [{ description: 'N64 ROM', accept: { 'application/octet-stream': ['.z64', '.n64', '.v64'] } }]
-          }).then(handles => handles[0]);
-          const file = await fileHandle.getFile();
-          const buf = await file.arrayBuffer();
-          n64js.ui().loadRomBuffer(buf, file.name);
-        } catch (e) {
-          // user cancelled — ignore
-        }
-      });
-
-      document.querySelectorAll('input[name="theme"]').forEach(r => {
-        r.addEventListener('change', setThemeFromRadio);
-      });
-
-      // ----- Init emulator ---------------------------------------------------
-      document.addEventListener('DOMContentLoaded', function () {
-        n64js.init();
-
-        // Show frame time if stats is enabled by UI
-        const mspf = document.getElementById('mspf');
-        n64js.setPerfCallback(ms => { mspf.textContent = Math.round(ms); });
-
-        // Determine ROM to autoload:
-        // 1) ?rom= query param; else
-        // 2) default to roms/gutterdome64.z64 (your layout)
-        const romParam = getQueryParam('rom');
-        const romPath = romParam ? romParam : 'roms/gutterdome64.z64';
-
-        // Fetch and run the ROM
-        fetch(romPath)
-          .then(r => {
-            if (!r.ok) throw new Error('ROM fetch failed: ' + r.status + ' ' + r.statusText);
-            return r.arrayBuffer();
-          })
-          .then(buf => n64js.ui().loadRomBuffer(buf, romPath))
-          .catch(err => {
-            console.error('Failed to load ROM:', err);
-            // Visible hint for common path/CORS errors
-            const hint = document.createElement('p');
-            hint.style.color = 'red';
-            hint.textContent = 'Could not load ROM at "' + romPath + '". Check the file path and that it is hosted on the same site.';
-            document.body.appendChild(hint);
+          const [handle] = await window.showOpenFilePicker({
+            types: [{ description: 'N64 ROM', accept: { 'application/octet-stream': ['.z64','.n64','.v64'] } }]
           });
+          const file = await handle.getFile();
+          n64js.ui().loadRomBuffer(await file.arrayBuffer(), file.name);
+        } catch {}
+      };
 
-        // Theme default
-        setThemeFromRadio();
+      // Autoload ROM
+      const rom = qp('rom') || 'roms/gutterdome64.z64';
+      n64js.ui().fetchAndRun(rom).catch(err => {
+        console.error('ROM load failed:', err);
+        const p = document.createElement('p');
+        p.style.color = 'red';
+        p.textContent = 'Could not load "' + rom + '". Check path / CORS in the console.';
+        document.body.appendChild(p);
       });
-    })();
+    });
   </script>
-
-  <style>
-    :root { color-scheme: light dark; }
-    html, body { margin: 0; font-family: system-ui, sans-serif; }
-    body { padding: 12px; }
-    #canvas-container { margin: 12px 0; }
-    canvas { background: #000; width: 640px; height: 480px; border: 1px solid #444; }
-    .toolbar button { margin-right: 8px; }
-    [data-theme="dark"] body { background: #111; color: #ddd; }
-  </style>
 </body>
 </html>
