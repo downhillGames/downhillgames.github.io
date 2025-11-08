@@ -1,98 +1,212 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Downhill Games — Web Demo</title>
-<meta name="description" content="Downhill Games in-browser demo shell. Emulator and ROM will be wired up later." />
-<meta name="theme-color" content="#0c1410" />
-<!-- Optional social cards -->
-<meta property="og:title" content="Downhill Games — Web Demo" />
-<meta property="og:description" content="Playable web demo shell. Emulator coming soon." />
-<meta property="og:type" content="website" />
-<meta property="og:image" content="/assets/og-cover.png" />
-<style>
-:root{
---bg:#0a0e0c; /* deep charcoal */
---panel:#0f1512; /* panel backing */
---glass:rgba(255,255,255,.04);
---stroke:rgba(255,255,255,.08);
---fg:#e7fbe7; /* minty white */
---muted:#a8b5a8;
---accent:#19ff6a; /* gooey green */
---accent-2:#77ffb0; /* highlight */
---chrome:#9ba3a3; /* subtle chrome */
---shadow: 0 12px 40px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
---radius: 18px;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-margin:0; background:radial-gradient(1200px 800px at 10% -10%, #0f1a14 0%, var(--bg) 60%), var(--bg);
-color:var(--fg); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-}
-.wrap{max-width:1100px; margin:40px auto; padding:0 20px}
-header{
-display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px;
-}
-.brand{display:flex; align-items:center; gap:14px; letter-spacing:.4px}
-.logo{
-width:44px; height:44px; border-radius:12px; position:relative; overflow:hidden;
-background:linear-gradient(135deg, #1a3a2a, #11231a);
-box-shadow: inset 0 0 0 1px var(--stroke), var(--shadow);
-}
-.logo::before{
-content:""; position:absolute; inset:3px; border-radius:10px;
-background: radial-gradient(120px 80px at 120% -20%, rgba(255,255,255,.25), transparent 60%),
-linear-gradient(180deg, rgba(25,255,106,.25), rgba(25,255,106,.05));
-filter: blur(.2px);
-}
-h1{font-size:20px; margin:0; font-weight:700}
-.sub{color:var(--muted); font-size:13px; margin-top:2px}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Downhill Games — Web Demo</title>
+  <meta name="description" content="Downhill Games in-browser demo shell. Emulator and ROM will be wired up later." />
+  <meta name="theme-color" content="#0c1410" />
+  <!-- Optional social cards -->
+  <meta property="og:title" content="Downhill Games — Web Demo" />
+  <meta property="og:description" content="Playable web demo shell. Emulator coming soon." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/assets/og-cover.png" />
+  <style>
+    :root{
+      --bg:#0a0e0c;           /* deep charcoal */
+      --panel:#0f1512;        /* panel backing */
+      --glass:rgba(255,255,255,.04);
+      --stroke:rgba(255,255,255,.08);
+      --fg:#e7fbe7;           /* minty white */
+      --muted:#a8b5a8;
+      --accent:#19ff6a;       /* gooey green */
+      --accent-2:#77ffb0;     /* highlight */
+      --chrome:#9ba3a3;       /* subtle chrome */
+      --shadow: 0 12px 40px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1200px 800px at 10% -10%, #0f1a14 0%, var(--bg) 60%), var(--bg);
+      color:var(--fg); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    }
+    .wrap{max-width:1100px; margin:40px auto; padding:0 20px}
+    header{
+      display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px;
+    }
+    .brand{display:flex; align-items:center; gap:14px; letter-spacing:.4px}
+    .logo{
+      width:44px; height:44px; border-radius:12px; position:relative; overflow:hidden;
+      background:linear-gradient(135deg, #1a3a2a, #11231a);
+      box-shadow: inset 0 0 0 1px var(--stroke), var(--shadow);
+    }
+    .logo::before{
+      content:""; position:absolute; inset:3px; border-radius:10px;
+      background: radial-gradient(120px 80px at 120% -20%, rgba(255,255,255,.25), transparent 60%),
+                  linear-gradient(180deg, rgba(25,255,106,.25), rgba(25,255,106,.05));
+      filter: blur(.2px);
+    }
+    h1{font-size:20px; margin:0; font-weight:700}
+    .sub{color:var(--muted); font-size:13px; margin-top:2px}
 
+    .status{
+      display:flex; align-items:center; gap:10px; color:var(--chrome); font-size:13px;
+    }
+    .dot{width:9px; height:9px; border-radius:50%; background:linear-gradient(180deg, var(--accent), #0ed95b); box-shadow:0 0 10px rgba(25,255,106,.5)}
 
-.status{
-display:flex; align-items:center; gap:10px; color:var(--chrome); font-size:13px;
-}
-.dot{width:9px; height:9px; border-radius:50%; background:linear-gradient(180deg, var(--accent), #0ed95b); box-shadow:0 0 10px rgba(25,255,106,.5)}
+    /* Stage */
+    .stage{
+      position:relative; background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)), var(--panel);
+      border:1px solid var(--stroke); border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden; isolation:isolate;
+    }
+    /* Maintain 16:9 while responsive */
+    .stage__pad{aspect-ratio:16/9; width:100%; display:grid; place-items:center;}
+    .frame{
+      width:100%; height:100%; border:0; border-radius:12px; display:block; background: #050805;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .placeholder{
+      text-align:center; color:var(--muted);
+    }
+    .placeholder h2{font-size:18px; margin:0 0 6px}
+    .placeholder p{margin:0; font-size:13px}
 
+    /* Toolbar */
+    .toolbar{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:12px;
+      border-top:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.08));
+    }
+    .btns{display:flex; gap:10px; align-items:center}
+    .btn{
+      appearance:none; border:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.18));
+      color:var(--fg); padding:10px 14px; font-weight:600; letter-spacing:.2px; border-radius:12px; cursor:pointer;
+      transform: translateZ(0); position:relative; transition:transform .08s ease, opacity .2s ease;
+    }
+    .btn[disabled]{opacity:.55; cursor:not-allowed}
+    .btn:active{transform: translateY(1px)}
+    .btn--primary{border-color: rgba(25,255,106,.4); box-shadow:0 0 0 1px rgba(25,255,106,.3) inset}
 
-/* Stage */
-.stage{
-position:relative; background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)), var(--panel);
-border:1px solid var(--stroke); border-radius: var(--radius);
-box-shadow: var(--shadow);
-overflow:hidden; isolation:isolate;
-}
-/* Maintain 16:9 while responsive */
-.stage__pad{aspect-ratio:16/9; width:100%; display:grid; place-items:center;}
-.frame{
-width:100%; height:100%; border:0; border-radius:12px; display:block; background: #050805;
-box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-}
-.placeholder{
-text-align:center; color:var(--muted);
-}
-.placeholder h2{font-size:18px; margin:0 0 6px}
-.placeholder p{margin:0; font-size:13px}
+    .right{display:flex; gap:10px; align-items:center}
+    .pill{
+      border:1px solid var(--stroke); padding:9px 12px; border-radius:999px; color:var(--chrome);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.15)); font-size:13px;
+    }
 
+    footer{color:var(--chrome); font-size:12px; text-align:center; margin:18px 0 32px}
 
-/* Toolbar */
-.toolbar{
-display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:12px;
-border-top:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.08));
-}
-.btns{display:flex; gap:10px; align-items:center}
-.btn{
-appearance:none; border:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.18));
-color:var(--fg); padding:10px 14px; font-weight:600; letter-spacing:.2px; border-radius:12px; cursor:pointer;
-transform: translateZ(0); position:relative; transition:transform .08s ease, opacity .2s ease;
-}
-.btn[disabled]{opacity:.55; cursor:not-allowed}
-.btn:active{transform: translateY(1px)}
-.btn--primary{border-color: rgba(25,255,106,.4); box-shadow:0 0 0 1px rgba(25,255,106,.3) inset}
+    @media (max-width:720px){
+      .wrap{margin:24px auto}
+      .toolbar{gap:8px}
+      .btn{padding:9px 12px}
+      h1{font-size:18px}
+      .sub{font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Downhill Games</h1>
+          <div class="sub">Web Demo • N64 Emulator (ROM hookup coming soon)</div>
+        </div>
+      </div>
+      <div class="status" id="status">
+        <span class="dot" aria-hidden="true"></span>
+        <span>Ready</span>
+      </div>
+    </header>
 
+    <section class="stage" id="stage" aria-label="Emulator stage">
+      <div class="stage__pad">
+        <!--
+          When you wire up the emulator, replace the placeholder below with an <iframe>
+          that points at your player (e.g., /ra/?core=mupen64plus_next&rom=/roms/gutterdone.z64&autostart=1&hideui=1)
+          OR mount your canvas directly if using a standalone WASM build.
+        -->
+        <div class="frame placeholder" id="frame">
+          <div>
+            <h2>ROM player not connected yet</h2>
+            <p>Drop in your emulator and ROM when ready. This window is 16:9 and responsive.</p>
+          </div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="btns">
+          <button class="btn btn--primary" id="btnPlay" disabled>Play</button>
+          <button class="btn" id="btnReset" disabled>Reset</button>
+          <button class="btn" id="btnFullscreen">Fullscreen</button>
+          <button class="btn" id="btnMute" disabled>Mute</button>
+        </div>
+        <div class="right">
+          <div class="pill">Gamepad supported</div>
+          <div class="pill">FPS: <span id="fps">–</span></div>
+        </div>
+      </div>
+    </section>
 
-.right{display:flex; gap:10px; align-items:center}
-.pill{
-border:1px solid var(--stroke); padding:9px 12px; border-radius:999px; color:var(--chrome);
+    <footer>
+      © <span id="year"></span> Downhill Games • Built by Tyler
+    </footer>
+  </div>
+
+  <!-- Optional service worker that enables SharedArrayBuffer on static hosts.
+       When you add an emulator, include the file at /coi-serviceworker.js and uncomment below. -->
+  <!-- <script>
+    if (!window.crossOriginIsolated && 'serviceWorker' in navigator){
+      navigator.serviceWorker.register('/coi-serviceworker.js');
+    }
+  </script> -->
+
+  <script>
+    // Dynamic year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Fake FPS ticker placeholder (so the UI feels alive even before hookup)
+    let t0 = performance.now();
+    let frames = 0;
+    function loop(){
+      frames++;
+      const t = performance.now();
+      if (t - t0 >= 1000){
+        document.getElementById('fps').textContent = Math.max(55, Math.min(60, 55 + Math.round(Math.random()*5)));
+        t0 = t; frames = 0;
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+
+    // Fullscreen for the stage (works now; later you can fullscreen the actual player element)
+    const fsBtn = document.getElementById('btnFullscreen');
+    fsBtn.addEventListener('click', async () => {
+      const el = document.getElementById('stage');
+      try{
+        if (!document.fullscreenElement){
+          await el.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      }catch(err){
+        console.warn('Fullscreen not allowed:', err);
+      }
+    });
+
+    // When you wire up the emulator, you can:
+    // 1) swap the placeholder div for an <iframe id="player"> pointing to your RA page
+    // 2) or inject a canvas from a WASM init
+    //
+    // Example (iframe approach):
+    // const shell = document.getElementById('frame');
+    // const iframe = document.createElement('iframe');
+    // iframe.className = 'frame';
+    // iframe.allow = 'gamepad *; fullscreen *';
+    // iframe.src = '/ra/?core=mupen64plus_next&rom=/roms/gutterdone.z64&autostart=1&hideui=1';
+    // shell.replaceWith(iframe);
+  </script>
+</body>
+</html>
