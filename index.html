@@ -773,8 +773,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Keep your existing n64js.init() call elsewhere
-
   async function tryFetch(url) {
     const busted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
     const res = await fetch(busted);
@@ -782,24 +780,22 @@ document.addEventListener('DOMContentLoaded', () => {
     return res.arrayBuffer();
   }
 
-  function candidatesFrom(paramOrDefault) {
-    // If user supplied ?rom=..., trust that path as-is (relative or absolute)
-    if (paramOrDefault) return [paramOrDefault];
-
-    // Otherwise try smart fallbacks (project page vs custom domain)
-    const rel = 'roms/gutterdome.z64';      // no leading slash
-    const dir = window.location.pathname.replace(/[^/]*$/, ''); // current dir
-    const inDir = dir + 'roms/gutterdome.z64';
-    const abs = '/' + ['','roms','gutterdome.z64'].join('/').replace(/\/+/g,'/'); // "/roms/gutterdome.z64"
-    // Order: relative (works for project pages), then same-dir, then absolute (works for custom domains)
-    return [rel, inDir, abs];
+  function buildCandidates(userRom) {
+    if (userRom) return [userRom]; // trust explicit ?rom=
+    const names = [
+      'gutterdome64.z64', // your site’s hinted default
+      'gutterdome.z64',
+      'gutterdome.n64',
+      'gutterdome.v64'
+    ];
+    const rels = names.map(n => `roms/${n}`);
+    const abss = names.map(n => `/roms/${n}`);
+    return [...rels, ...abss];
   }
 
   async function autoloadRom() {
-    const params = new URLSearchParams(window.location.search);
-    const userRom = params.get('rom'); // can be absolute or relative
-    const urls = candidatesFrom(userRom);
-
+    const params = new URLSearchParams(location.search);
+    const urls = buildCandidates(params.get('rom'));
     let lastErr;
     for (const url of urls) {
       try {
@@ -813,15 +809,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('[autoload] failed', e.message);
       }
     }
-
-    const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n');
-    if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
-    else alert(msg);
+    const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n') + (lastErr ? '\n\nLast error: ' + lastErr.message : '');
+    if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg); else alert(msg);
   }
 
   autoloadRom();
 });
 </script>
+
 
   
   <footer class="mt-4 py-3 text-center small text-secondary">
