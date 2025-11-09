@@ -854,115 +854,112 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
+
 <script>
 /**
- * Startup unstick shim:
- *   1) Wait for the FIRST user gesture (click/tap or keypress).
- *   2) Programmatically click the hidden #fileInput (your Load ROM control).
- *   3) After the user cancels the dialog, give the core a tiny nudge.
- *
+ * One-time startup unstick:
+ *  - On the *first* user gesture, call the same handler as the “Load” button:
+ *      n64js.ui().triggerLoad()  → opens native file dialog
+ *  - When the user CANCELS the dialog (window regains focus), toggle run to kick the core.
  * Enable with ?unstick=1 (or set ALWAYS_ON = true).
  */
 (function () {
-  const ALWAYS_ON = false; // set to true if you want it always enabled
+  const ALWAYS_ON = false; // set to true if you want it always on
   const enabled = ALWAYS_ON || new URLSearchParams(location.search).get('unstick') === '1';
   if (!enabled) return;
 
-  function once(el, ev, fn) {
-    const h = (e) => { el.removeEventListener(ev, h, true); fn(e); };
-    el.addEventListener(ev, h, true);
-  }
+  // Safety: don’t arm twice
+  let armed = false, done = false;
 
-  function tryToggleRun(delay = 120) {
+  function nudge(delay = 120) {
+    if (done) return; done = true;
     setTimeout(() => {
       try {
         if (window.n64js && typeof n64js.toggleRun === 'function') {
-          n64js.toggleRun();                 // pause (or toggle)
+          n64js.toggleRun();            // pause
           setTimeout(() => n64js.toggleRun(), 100); // resume
-          console.log('[unstick] toggled run');
+          console.log('[unstick] nudged core');
         }
       } catch (e) {
-        console.warn('[unstick] toggle run failed:', e);
+        console.warn('[unstick] toggleRun failed:', e);
       }
     }, delay);
   }
 
-  function clickFileInput() {
-    const fileInput = document.getElementById('fileInput');
-    if (!fileInput) {
-      console.warn('[unstick] #fileInput not found');
-      return;
-    }
-    // Clicking the hidden file input must happen in a trusted user gesture.
-    fileInput.click();
-    console.log('[unstick] opened file dialog');
-
-    /**
-     * Detect “return” from the native dialog:
-     * - 'change' fires only if a file was chosen (won’t fire on cancel)
-     * - 'focus' usually fires when the window regains focus after cancel
-     * - timer is a fallback for odd browsers
-     */
-    let done = false;
-    const markDone = () => { if (!done) { done = true; tryToggleRun(); } };
-
-    // If user actually picked a ROM, don’t interfere; we still nudge but later.
-    once(fileInput, 'change', () => {
-      console.log('[unstick] file chosen; will still nudge after a moment');
-      tryToggleRun(300);
-      done = true;
-    });
-
-    // Most common path: user hits "Cancel" → window regains focus
-    once(window, 'focus', () => {
-      console.log('[unstick] focus restored (likely cancel); nudging core');
-      markDone();
-    });
-
-    // Fallback nudge in case focus detection doesn’t fire
-    setTimeout(markDone, 1200);
+  function onDialogReturn() {
+    // Called when we think the file dialog was closed (usually via Cancel)
+    window.removeEventListener('focus', onDialogReturn, true);
+    document.removeEventListener('visibilitychange', onDialogReturn, true);
+    nudge();
   }
 
-  // Minimal UI: small one-time “Tap to Start” chip in the corner
-  function showStarterChip() {
+  function firstGesture() {
+    if (armed) return; armed = true;
+
+    // Call the SAME handler the toolbar Load button uses.
+    // This path may do extra UI/core init work vs. clicking the input directly.
+    try {
+      if (window.n64js && n64js.ui && typeof n64js.ui().triggerLoad === 'function') {
+        n64js.ui().triggerLoad();
+        console.log('[unstick] called n64js.ui().triggerLoad()');
+      } else {
+        console.warn('[unstick] triggerLoad not available; aborting');
+        return;
+      }
+    } catch (e) {
+      console.warn('[unstick] triggerLoad threw:', e);
+      return;
+    }
+
+    // Detect when the native picker closes (Cancel or file chosen):
+    //  - focus returns to window
+    //  - page becomes visible again
+    //  - fallback timer
+    window.addEventListener('focus', onDialogReturn, true);
+    document.addEventListener('visibilitychange', () => {
+      if (!done && document.visibilityState === 'visible') onDialogReturn();
+    }, { once: true });
+
+    // If user actually picked a ROM, the emulator will run anyway.
+    // Still give a gentle nudge a bit later as a no-op.
+    setTimeout(() => { if (!done) nudge(); }, 1500);
+  }
+
+  function arm() {
+    // Minimal chip so the user knows why a picker opens
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.textContent = 'Tap to start (fix freeze)';
+    chip.textContent = 'Tap to start (unstick)';
     chip.style.cssText = `
-      position: fixed; inset: auto 1rem 1rem auto; z-index: 9999;
-      padding: .6rem .9rem; border-radius: 999px; border: 0;
-      box-shadow: 0 4px 14px rgba(0,0,0,.2); cursor: pointer;
-      font: 500 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      position: fixed; inset: auto 1rem 1rem auto; z-index: 99999;
+      padding: .55rem .9rem; border-radius: 999px; border: 0;
+      box-shadow: 0 4px 14px rgba(0,0,0,.25); cursor: pointer;
+      font: 600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     `;
     chip.addEventListener('click', () => {
       chip.remove();
-      clickFileInput();
+      firstGesture();
     }, { once: true });
     document.body.appendChild(chip);
-  }
 
-  // Also allow the *very first* interaction anywhere to trigger it automatically.
-  function armGlobalFirstGesture() {
+    // Also accept the very first click/keydown anywhere
     const handler = () => {
       document.removeEventListener('click', handler, true);
       document.removeEventListener('keydown', handler, true);
-      clickFileInput();
+      chip.remove();
+      firstGesture();
     };
     document.addEventListener('click', handler, true);
     document.addEventListener('keydown', handler, true);
   }
 
-  // Wait until DOM is ready, then arm
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { showStarterChip(); armGlobalFirstGesture(); }, { once: true });
+    document.addEventListener('DOMContentLoaded', arm, { once: true });
   } else {
-    showStarterChip();
-    armGlobalFirstGesture();
+    arm();
   }
 })();
 </script>
-
-
 
 
 
