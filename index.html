@@ -773,63 +773,50 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const OWNER = 'downhillGames';
-  const REPO  = 'downhillgames.github.io';
-  const ASSET = 'gutterdome64.z64';
-  const TAG   = 'Asset'; // your release tag name
-
-  // Candidate URLs in priority order
-  function buildCandidates() {
-    return [
-      // Latest release asset (preferred – auto-updates when you change "Latest")
-      `https://github.com/${OWNER}/${REPO}/releases/latest/download/${ASSET}`,
-      // Specific tag fallback
-      `https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${ASSET}`,
-      // Local fallback (in case you also commit it under /roms)
-      `roms/${ASSET}`
-    ];
-  }
+  const ASSET_URLS = [
+    // Prefer "latest" so you can retag later without changing code
+    'https://github.com/downhillGames/downhillgames.github.io/releases/latest/download/gutterdome64.z64',
+    // Fallback to your explicit tag
+    'https://github.com/downhillGames/downhillgames.github.io/releases/download/Asset/gutterdome64.z64',
+    // Optional local fallback if you ever commit it to the repo
+    'roms/gutterdome64.z64'
+  ];
 
   async function fetchArrayBuffer(url) {
-    // no-store to beat CDN caching when you re-upload
     const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
     return res.arrayBuffer();
   }
 
-  async function loadRomFrom(url) {
+  async function tryLoad(url) {
     const buf = await fetchArrayBuffer(url);
-
-    // Safety: if we ever hit a text file (e.g., LFS pointer), bail with a clear message
+    // Guard against accidental text (e.g., LFS pointer or HTML)
     const head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(buf.byteLength, 64)));
     if (/^version https:\/\/git-lfs.github.com\/spec\/v1/.test(head)) {
-      throw new Error('This URL returned a Git LFS pointer (text), not the ROM binary.');
+      throw new Error('This URL returned a Git LFS pointer, not the ROM binary.');
     }
-
     n64js.loadRomAndStartRunning(buf);
     console.log('[autoload] loaded', url);
   }
 
   async function autoloadRom() {
-    const params = new URLSearchParams(location.search);
-    const userRom = params.get('rom');
-    const urls = userRom ? [userRom] : buildCandidates();
+    const param = new URLSearchParams(location.search).get('rom');
+    const urls = param ? [param] : ASSET_URLS;
 
     let lastErr;
-    for (const url of urls) {
-      try { await loadRomFrom(url); return; }
+    for (const u of urls) {
+      try { await tryLoad(u); return; }
       catch (e) { lastErr = e; console.warn('[autoload] failed', e?.message || e); }
     }
-
     const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n') +
                 (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : '');
-    if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
-    else alert(msg);
+    (n64js.ui && n64js.ui().displayError) ? n64js.ui().displayError(msg) : alert(msg);
   }
 
   autoloadRom();
 });
 </script>
+
 
 
   
