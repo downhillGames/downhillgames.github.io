@@ -781,27 +781,28 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchArrayBuffer(url) {
     const busted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
     const res = await fetch(busted);
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    if (!res.ok) {
+      // Surface both status and URL for easier debugging
+      throw new Error(`HTTP ${res.status} for ${url}`);
+    }
     return res.arrayBuffer();
   }
 
-  function preferGutter(a, b) {
-    const pa = /gutter/i.test(a.name), pb = /gutter/i.test(b.name);
-    if (pa && !pb) return -1;
-    if (!pa && pb) return 1;
-    return a.name.localeCompare(b.name);
-  }
-
-  async function findRomInRepo() {
+  // If GitHub API is rate-limited or blocked, this will throw with a clear message.
+  async function discoverRomViaGithub() {
     const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${REF}`;
     const res = await fetch(api, { headers: { 'Accept': 'application/vnd.github+json' }});
     if (!res.ok) throw new Error(`GitHub API ${res.status} for ${api}`);
     const items = await res.json();
     const roms = (Array.isArray(items) ? items : [])
-      .filter(x => x.type === 'file' && /\.(z64|n64|v64)$/i.test(x.name))
-      .sort(preferGutter);
-    if (!roms.length) throw new Error('No *.z64|*.n64|*.v64 files found in /roms');
-    // Build a raw URL so we bypass HTML rendering:
+      .filter(x => x && x.type === 'file' && /\.(z64|n64|v64)$/i.test(x.name))
+      .sort((a,b) => {
+        const ga = /gutter/i.test(a.name), gb = /gutter/i.test(b.name);
+        if (ga && !gb) return -1;
+        if (!ga && gb) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    if (!roms.length) throw new Error('No *.z64|*.n64|*.v64 files found in /roms on main');
     const name = roms[0].name;
     return `https://raw.githubusercontent.com/${OWNER}/${REPO}/${REF}/${DIR}/${name}`;
   }
@@ -810,13 +811,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const params = new URLSearchParams(location.search);
       const userRom = params.get('rom');
-      const romUrl = userRom || await findRomInRepo();
+      const romUrl = userRom || await discoverRomViaGithub();
       const buf = await fetchArrayBuffer(romUrl);
       n64js.loadRomAndStartRunning(buf);
       console.log('[autoload] loaded', romUrl);
     } catch (e) {
+      const msg = 'Failed to autoload ROM: ' + (e && (e.message || e.statusText || String(e)));
       console.error('[autoload] failed:', e);
-      const msg = 'Failed to autoload ROM: ' + e.message;
       if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
       else alert(msg);
     }
@@ -825,7 +826,6 @@ document.addEventListener('DOMContentLoaded', () => {
   autoloadRom();
 });
 </script>
-
 
 
   
