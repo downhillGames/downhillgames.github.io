@@ -8,8 +8,6 @@
 // in bounds for ram (0x8000_0000 <= x < 0x8080_0000). The constant is derived from interpreting 0x80800000
 // as a 32-bit signed value.
 
-import { EmulatedException } from "./emulated_exception";
-
 let getMemoryHandler;
 let ramDV;
 let cpu0;
@@ -19,6 +17,44 @@ export function reset(hardware, c0) {
   ramDV = hardware.cachedMemDevice.mem.dataView;
   cpu0 = c0;
 }
+
+export function loadU64slow(addr) {
+  if (addr & 7) { cpu0.unalignedLoad(addr); }
+  return getMemoryHandler(addr).readU64(addr);
+}
+export function loadU16slow(addr) {
+  if (addr & 1) { cpu0.unalignedLoad(addr); }
+  return getMemoryHandler(addr).readU16(addr);
+}
+export function loadU32slow(addr) {
+  if (addr & 3) { cpu0.unalignedLoad(addr); }
+  return getMemoryHandler(addr).readU32(addr);
+}
+export function loadU8slow(addr) { return getMemoryHandler(addr).readU8(addr); }
+
+export function loadS32slow(addr) {
+  if (addr & 3) { cpu0.unalignedLoad(addr); }
+  return getMemoryHandler(addr).readS32(addr);
+}
+export function loadS16slow(addr) {
+  if (addr & 1) { cpu0.unalignedLoad(addr); }
+  return getMemoryHandler(addr).readS16(addr);
+}
+export function loadS8slow(addr) { return getMemoryHandler(addr).readS8(addr); }
+
+export function store64slow(addr, value) {
+  if (addr & 7) { cpu0.unalignedStore(addr); }
+  getMemoryHandler(addr).write64(addr, value);
+}
+export function store32slow(addr, value) {
+  if (addr & 3) { cpu0.unalignedStore(addr); }
+  getMemoryHandler(addr).write32(addr, value);
+}
+export function store16slow(addr, value) {
+  if (addr & 1) { cpu0.unalignedStore(addr); }
+  getMemoryHandler(addr).write16(addr, value);
+}
+export function store8slow(addr, value) { getMemoryHandler(addr).write8(addr, value); }
 
 export function store32masked(addr, value, mask) { getMemoryHandler(addr).write32masked(addr, value, mask); }
 export function store64masked(addr, value, mask) { getMemoryHandler(addr).write64masked(addr, value, mask); }
@@ -113,59 +149,4 @@ export function store64fast(sAddr, value) {
     return;
   }
   store64slow(sAddr >>> 0, value);
-}
-
-// Unsigned loads.
-function loadU8slow(addr) {
-  return getMemoryHandler(addr).readU8(addr);
-}
-
-function loadU16slow(addr) {
-  if (addr & 1) { cpu0.unalignedLoad(addr); }
-  return getMemoryHandler(addr).readU16(addr);
-}
-
-function loadU32slow(addr) {
-  if (addr & 3) { cpu0.unalignedLoad(addr); }
-  return getMemoryHandler(addr).readU32(addr);
-}
-
-function loadU64slow(addr) {
-  if (addr & 7) { cpu0.unalignedLoad(addr); }
-  return getMemoryHandler(addr).readU64(addr);
-}
-
-// Signed loads.
-function loadS8slow(addr) {
-  return (getMemoryHandler(addr).readU8(addr) << 24) >> 24;
-}
-
-function loadS16slow(addr) {
-  if (addr & 1) { cpu0.unalignedLoad(addr); }
-  return (getMemoryHandler(addr).readU16(addr) << 16) >> 16;
-}
-
-export function loadS32slow(addr) {
-  if (addr & 3) { cpu0.unalignedLoad(addr); }
-  return getMemoryHandler(addr).readU32(addr) >> 0;
-}
-
-// Stores.
-function store8slow(addr, value) {
-  getMemoryHandler(addr).write8(addr, value);
-}
-
-function store16slow(addr, value) {
-  if (addr & 1) { cpu0.unalignedStore(addr); }
-  getMemoryHandler(addr).write16(addr, value);
-}
-
-function store32slow(addr, value) {
-  if (addr & 3) { cpu0.unalignedStore(addr); }
-  getMemoryHandler(addr).write32(addr, value);
-}
-
-function store64slow(addr, value) {
-  if (addr & 7) { cpu0.unalignedStore(addr); }
-  getMemoryHandler(addr).write64(addr, value);
 }

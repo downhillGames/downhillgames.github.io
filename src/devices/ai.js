@@ -73,6 +73,10 @@ export class AIRegDevice extends Device {
   }
 
   readU32(address) {
+    return this.readS32(address) >>> 0;
+  }
+
+  readS32(address) {
     const ea = this.calcWriteEA(address);
     if (ea + 4 > this.u8.length) {
       throw 'Write is out of range';
@@ -89,7 +93,7 @@ export class AIRegDevice extends Device {
     }
 
     // All other reads return the current length.
-    return this.dmaLengthRemaining() >>> 0;
+    return this.dmaLengthRemaining();
   }
 
   write32(address, value) {

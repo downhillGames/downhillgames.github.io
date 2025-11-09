@@ -1,12 +1,11 @@
 /*jshint jquery:true */
 /*global $, n64js*/
 
-import * as cpu0reg from './cpu0reg.js';
+import * as cpu0_constants from './cpu0_constants.js';
 import { disassembleRange, cop0gprNames, cop1RegisterNames } from './disassemble.js';
 import * as disassemble_rsp from "./disassemble_rsp.js";
-import { getFragmentMap } from './fragments.js';
+import { getFragmentMap, consumeFragmentInvalidationEvents } from './fragments.js';
 import { toggleDebugDisplayList } from './hle/hle_graphics.js';
-import { TaskOffsets } from './hle/rsp_task.js';
 import { toHex, toString8, toString16, toString32, toString64 } from './format.js';
 import * as logger from './logger.js';
 import { cpu0, cpu1 } from './r4300.js';
@@ -16,6 +15,295 @@ import * as mi from './devices/mi.js';
 import * as dbgUI from './dbg_ui.js';
 
 window.n64js = window.n64js || {};
+
+class CPUDebugState {
+  constructor() {
+    /** @type {number} The address to disassemble. */
+    this.disasmAddress = 0;
+
+    /** @type {number} The program counter the last time the display was updated. */
+    this.lastPC = -1;
+  }
+
+  setPC(newPC) {
+    // If the pc has changed since the last update, recenter the display (e.g. when we take a branch)
+    if (newPC !== this.lastPC) {
+      this.disasmAddress = newPC;
+      this.lastPC = newPC;
+    }
+  }
+
+  scroll(offset) {
+    this.disasmAddress += offset * 4;
+    // TODO: trigger redraw from here.
+  }
+}
+
+class R4300DebugState extends CPUDebugState {
+  disassembleRange() {
+    return disassembleRange(this.disasmAddress - 64, this.disasmAddress + 64, true);
+  }
+
+  /**
+   * Makes a table showing the status register contents.
+   * @return {!jQuery}
+   */
+  updateStatusTable() {
+    setTextContent('#cpu0-status-opsexecuted', cpu0.opsExecuted);
+    setTextContent('#cpu0-status-pc', toString32(cpu0.pc));
+    setTextContent('#cpu0-status-delaypc', toString32(cpu0.delayPC));
+    setTextContent('#cpu0-status-epc', toString32(cpu0.getControlU32(cpu0_constants.controlEPC)));
+    setTextContent('#cpu0-status-cause', toString32(Number(cpu0.moveFromControl(cpu0_constants.controlCause) & 0xffff_ffffn)));
+    setTextContent('#cpu0-status-count', toString32(Number(cpu0.moveFromControl(cpu0_constants.controlCount) & 0xffff_ffffn)));
+    setTextContent('#cpu0-status-compare', toString32(cpu0.getControlU32(cpu0_constants.controlCompare)));
+    setTextContent('#cpu0-status-multhi', toString64(cpu0.getMultHiU64()));
+    setTextContent('#cpu0-status-multlo', toString64(cpu0.getMultLoU64()));
+
+    this.updateStatusRegisterRow();
+    this.updateMipsInterruptsRow();
+
+    let $body = $('#cpu0-status-events').find('tbody');
+    $body.empty();
+    $body.append(`<tr><td>&nbsp;</td></tr>`);
+    $body.append(`<tr><td>Events</td></tr>`);
+
+    const eq = cpu0.eventQueue;
+    let cycles = eq.cyclesToFirstEvent;
+    for (let event = eq.firstEvent; event; event = event.next) {
+      $body.append(`<tr><td>${event.getName()}</td><td class="fixed">${cycles}</td></tr>`);
+      cycles += event.cyclesToNextEvent;
+    }
+  }
+
+  updateStatusRegisterRow() {
+    const sr = cpu0.getControlU32(cpu0_constants.controlStatus);
+    setTextContent('#cpu0-status-sr', toString32(sr));
+
+    const ids = {
+      '#cpu0-status-sr-ie': r4300.SR_IE,
+      '#cpu0-status-sr-exl': r4300.SR_EXL,
+      '#cpu0-status-sr-erl': r4300.SR_ERL,
+      // ux
+      // sx
+      // kx
+    };
+    for (let [id, mask] of Object.entries(ids)) {
+      const elem = document.querySelector(id);
+      if (!elem) {
+        continue;
+      }
+      const set = (sr & mask) !== 0;
+      elem.classList.toggle('cpu0-status-bit-set', set);
+    }
+  }
+
+  updateMipsInterruptsRow() {
+    const miDev = n64js.hardware().miRegDevice;
+    const setBits = miDev.intrReg();
+    const enabledBits = miDev.intrMaskReg();
+
+    const ids = {
+      '#cpu0-status-mi-sp': mi.MI_INTR_SP,
+      '#cpu0-status-mi-si': mi.MI_INTR_SI,
+      '#cpu0-status-mi-ai': mi.MI_INTR_AI,
+      '#cpu0-status-mi-vi': mi.MI_INTR_VI,
+      '#cpu0-status-mi-pi': mi.MI_INTR_PI,
+      '#cpu0-status-mi-dp': mi.MI_INTR_DP,
+    }
+
+    for (let [id, mask] of Object.entries(ids)) {
+      const elem = document.querySelector(id);
+      if (!elem) {
+        continue;
+      }
+      const set = (setBits & mask) !== 0;
+      const enabled = (enabledBits & mask) !== 0;
+      elem.classList.toggle('cpu0-status-bit-enabled', enabled);
+      elem.classList.toggle('cpu0-status-bit-set', set);
+    }
+  }
+
+  /**
+   * Makes a table of co-processor 0 registers.
+   * @param {!Map<string, string>} registerColours Register colour map.
+   * @return {!jQuery}
+   */
+  makeCop0RegistersTable(registerColours) {
+    let $table = $('<table class="register-table"><tbody></tbody></table>');
+    let $body = $table.find('tbody');
+
+    const kRegistersPerRow = 2;
+
+    for (let i = 0; i < 32; i += kRegistersPerRow) {
+      let $tr = $('<tr />');
+      for (let r = 0; r < kRegistersPerRow; ++r) {
+        let name = cop0gprNames[i + r];
+        let $td = $(`<td>${name}</td><td class="fixed">${toString64(cpu0.getRegU64(i + r))}</td>`);
+
+        if (registerColours.has(name)) {
+          $td.attr('bgcolor', registerColours.get(name));
+        }
+        $tr.append($td);
+      }
+      $body.append($tr);
+    }
+
+    return $table;
+  }
+
+  /**
+   * Makes a table of co-processor 1 registers.
+   * @param {!Map<string, string>} registerColours Register colour map.
+   * @return {!jQuery}
+   */
+  makeCop1RegistersTable(registerColours) {
+    let $table = $('<table class="register-table"><tbody></tbody></table>');
+    let $body = $table.find('tbody');
+
+    for (let i = 0; i < 32; ++i) {
+      let name = cop1RegisterNames[i];
+
+      let $td;
+      if ((i & 1) === 0) {
+        $td = $(`<td>${name}</td>
+                 <td class="fixed fp-w">${toString32(cpu1.regU32[i])}</td>
+                 <td class="fixed fp-s">${cpu1.regF32[i]}</td>
+                 <td class="fixed fp-d">${cpu1.regF64[i / 2]}</td>`);
+      } else {
+        $td = $(`<td>${name}</td>
+                 <td class="fixed fp-w">${toString32(cpu1.regU32[i])}</td>
+                 <td class="fixed fp-s">${cpu1.regF32[i]}</td>
+                 <td></td>`);
+      }
+
+      let $tr = $('<tr />');
+      $tr.append($td);
+
+      if (registerColours.has(name)) {
+        $tr.attr('bgcolor', registerColours.get(name));
+      } else if (registerColours.has(name + '-w')) {
+        $tr.find('.fp-w').attr('bgcolor', registerColours.get(name + '-w'));
+      } else if (registerColours.has(name + '-s')) {
+        $tr.find('.fp-s').attr('bgcolor', registerColours.get(name + '-s'));
+      } else if (registerColours.has(name + '-d')) {
+        $tr.find('.fp-d').attr('bgcolor', registerColours.get(name + '-d'));
+      }
+
+      $body.append($tr);
+    }
+
+    return $table;
+  }
+}
+
+class RSPDebugState extends CPUDebugState {
+  disassembleRange() {
+    return disassemble_rsp.disassembleRange(rsp.imem, this.disasmAddress - 64, this.disasmAddress + 64, true);
+  }
+
+  updateStatusTable() {
+    setTextContent('#rsp-status-halted', rsp.halted);
+    setTextContent('#rsp-status-pc', toString32(rsp.pc));
+    setTextContent('#rsp-status-delaypc', toString32(rsp.delayPC));
+    setTextContent('#rsp-status-nextpc', toString32(rsp.nextPC));
+    setTextContent('#rsp-status-branchtarget', toString32(rsp.branchTarget));
+    setTextContent('#rsp-status-vco', toString16(rsp.VCO));
+    setTextContent('#rsp-status-vcc', toString16(rsp.VCC));
+    setTextContent('#rsp-status-vce', toString8(rsp.VCE));
+  }
+
+  /**
+   * Makes a table of the scalar registers.
+   * @param {!Map<string, string>} registerColours Register colour map.
+   * @return {!jQuery}
+   */
+  makeScalarRegistersTable(registerColours) {
+    let $table = $('<table class="register-table"><tbody></tbody></table>');
+    let $body = $table.find('tbody');
+
+    const kRegistersPerRow = 2;
+
+    for (let i = 0; i < 32; i += kRegistersPerRow) {
+      let $tr = $('<tr />');
+      for (let r = 0; r < kRegistersPerRow; ++r) {
+        let name = disassemble_rsp.gprNames[i + r];
+        let $td = $(`<td>${name}</td><td class="fixed">${toString32(rsp.getRegU32(i + r))}</td>`);
+
+        if (registerColours.has(name)) {
+          $td.attr('bgcolor', registerColours.get(name));
+        }
+        $tr.append($td);
+      }
+      $body.append($tr);
+    }
+
+    return $table;
+  }
+
+  /**
+   * Makes a table of the vector registers.
+   * @param {!Map<string, string>} registerColours Register colour map.
+   * @return {!jQuery}
+   */
+  makeVectorRegistersTable(registerColours) {
+    let $table = $('<table class="register-table"><tbody></tbody></table>');
+    let $body = $table.find('tbody');
+
+    for (let r = 0; r < 32; r++) {
+      let $tr = $('<tr />');
+      const name = `V${r}`;
+      $tr.append($(`<td>${name}</td>`));
+      for (let el = 0; el < 8; ++el) {
+        let $td = $(`<td class="fixed">${toHex(rsp.getVecU16(r, el), 16)}</td>`);
+        // FIXME: make this work with vector registers.
+        if (registerColours.has(name)) {
+          $td.attr('bgcolor', registerColours.get(name));
+        }
+        $tr.append($td);
+      }
+      $body.append($tr);
+    }
+    return $table;
+  }
+
+  /**
+   * Makes a table of the RSP task state.
+   * @return {!jQuery}
+   */
+  makeTaskTable() {
+    const kTaskOffset = 0x0fc0;
+    const kTaskLength = 0x40;
+    const taskMem = n64js.hardware().sp_mem.subRegion(kTaskOffset, kTaskLength);
+
+    let $table = $('<table class="register-table"><tbody></tbody></table>');
+    let $body = $table.find('tbody');
+
+    const names = [
+      "type",             // 0x00; // u32
+      "flags",            // 0x04; // u32
+      "ucode_boot",       // 0x08; // u64*
+      "ucode_boot_size",  // 0x0c; // u32
+      "ucode",            // 0x10; // u64*
+      "ucode_size",       // 0x14; // u32
+      "ucode_data",       // 0x18; // u64*
+      "ucode_data_size",  // 0x1c; // u32
+      "dram_stack",       // 0x20; // u64*
+      "dram_stack_size",  // 0x24; // u32
+      "output_buff",      // 0x28; // u64*
+      "output_buff_size", // 0x2c; // u64*
+      "data_ptr",         // 0x30; // u64*
+      "data_size",        // 0x34; // u32
+      "yield_data_ptr",   // 0x38; // u64*
+      "yield_data_size",  // 0x3c; // u32
+    ];
+
+    for (let i = 0; i < kTaskLength / 4; i++) {
+      const $tr = $(`<tr><td>${names[i]}</td><td class="fixed">${toHex(taskMem.getU32(i * 4), 32)}</td></tr>`);
+      $body.append($tr);
+    }
+    return $table;
+  }
+}
 
 export class Debugger {
   constructor() {
@@ -330,7 +618,7 @@ export class Debugger {
   onClickBreakpoint(e) {
     let $elem = $(e.delegateTarget);
     let address = /** @type {number} */($elem.data('address')) >>> 0;
-    n64js.breakpoints().toggle(address);
+    n64js.toggleBreakpoint(address);
     this.updateCPU();
   }
 
@@ -390,7 +678,7 @@ export class Debugger {
       $disText.append('<br>');
 
       let bpText = '&nbsp;';
-      if (n64js.breakpoints().isBreakpoint(address)) {
+      if (n64js.isBreakpoint(address)) {
         bpText = '&bull;';
       }
       let $bp = $(`<span>${bpText}</span>`).data('address', address).click(this.onClickBreakpoint.bind(this));
@@ -472,7 +760,7 @@ export class Debugger {
 
       // FIXME: Add breakpoint support for RSP.
       let bpText = '&nbsp;';
-      if (n64js.breakpoints().isBreakpoint(address)) {
+      if (n64js.isBreakpoint(address)) {
         bpText = '&bull;';
       }
       let $bp = $(`<span>${bpText}</span>`).data('address', address).click(this.onClickBreakpoint.bind(this));
@@ -599,17 +887,18 @@ export class Debugger {
   }
 
   updateDynarec() {
+    let invals = consumeFragmentInvalidationEvents();
     let histogram = new Map();
     let maxBucket = 0;
 
     // Build a flattened list of all fragments
     let fragmentsList = [];
-    getFragmentMap().forEach((fragment) => {
+    for (let [pc, fragment] of getFragmentMap()) {
       let i = fragment.executionCount > 0 ? Math.floor(Math.log10(fragment.executionCount)) : 0;
       histogram.set(i, (histogram.get(i) || 0) + 1);
       fragmentsList.push(fragment);
       maxBucket = Math.max(maxBucket, i);
-    });
+    }
 
     fragmentsList.sort((a, b) => {
       return b.opsCompiled * b.executionCount - a.opsCompiled * a.executionCount;
@@ -641,6 +930,28 @@ export class Debugger {
     this.createHotFragmentsTable($fragmentDiv, fragmentsList);
 
     $t.append($fragmentDiv);
+
+    // Evictions
+    if (invals.length > 0) {
+      t = '';
+      t += '<div class="row">';
+      t += '<div class="col-lg-6">';
+      t += '<table class="table table-condensed">';
+      t += '<tr><th>Address</th><th>Length</th><th>System</th><th>Fragments Removed</th></tr>';
+      for (let i = 0; i < invals.length; ++i) {
+        let vals = [
+          toString32(invals[i].address),
+          invals[i].length,
+          invals[i].system,
+          invals[i].fragmentsRemoved,
+        ];
+        t += `<tr><td>${vals.join('</td><td>')}</td></tr>`;
+      }
+      t += '</table>';
+      t += '</div>';
+      t += '</div>';
+      $t.append(t);
+    }
 
     this.$dynarecContent.empty().append($t);
   }
@@ -792,277 +1103,6 @@ export class Debugger {
   }
 }
 
-
-class CPUDebugState {
-  constructor() {
-    /** @type {number} The address to disassemble. */
-    this.disasmAddress = 0;
-
-    /** @type {number} The program counter the last time the display was updated. */
-    this.lastPC = -1;
-  }
-
-  setPC(newPC) {
-    // If the pc has changed since the last update, recenter the display (e.g. when we take a branch)
-    if (newPC !== this.lastPC) {
-      this.disasmAddress = newPC;
-      this.lastPC = newPC;
-    }
-  }
-
-  scroll(offset) {
-    this.disasmAddress += offset * 4;
-    // TODO: trigger redraw from here.
-  }
-}
-
-class R4300DebugState extends CPUDebugState {
-  disassembleRange() {
-    return disassembleRange(this.disasmAddress - 64, this.disasmAddress + 64, true);
-  }
-
-  /**
-   * Makes a table showing the status register contents.
-   * @return {!jQuery}
-   */
-  updateStatusTable() {
-    setTextContent('#cpu0-status-opsexecuted', cpu0.opsExecuted);
-    setTextContent('#cpu0-status-pc', toString32(cpu0.pc));
-    setTextContent('#cpu0-status-delaypc', toString32(cpu0.delayPC));
-    setTextContent('#cpu0-status-epc', toString32(cpu0.getControlU32(cpu0reg.controlEPC)));
-    setTextContent('#cpu0-status-cause', toString32(Number(cpu0.moveFromControl(cpu0reg.controlCause) & 0xffff_ffffn)));
-    setTextContent('#cpu0-status-count', toString32(Number(cpu0.moveFromControl(cpu0reg.controlCount) & 0xffff_ffffn)));
-    setTextContent('#cpu0-status-compare', toString32(cpu0.getControlU32(cpu0reg.controlCompare)));
-    setTextContent('#cpu0-status-multhi', toString64(cpu0.getMultHiU64()));
-    setTextContent('#cpu0-status-multlo', toString64(cpu0.getMultLoU64()));
-
-    this.updateStatusRegisterRow();
-    this.updateMipsInterruptsRow();
-
-    let $body = $('#cpu0-status-events').find('tbody');
-    $body.empty();
-    $body.append(`<tr><td>&nbsp;</td></tr>`);
-    $body.append(`<tr><td>Events</td></tr>`);
-
-    const eq = cpu0.eventQueue;
-    let cycles = eq.cyclesToFirstEvent;
-    for (let event = eq.firstEvent; event; event = event.next) {
-      $body.append(`<tr><td>${event.getName()}</td><td class="fixed">${cycles}</td></tr>`);
-      cycles += event.cyclesToNextEvent;
-    }
-  }
-
-  updateStatusRegisterRow() {
-    const sr = cpu0.getControlU32(cpu0reg.controlStatus);
-    setTextContent('#cpu0-status-sr', toString32(sr));
-
-    const ids = {
-      '#cpu0-status-sr-ie': r4300.SR_IE,
-      '#cpu0-status-sr-exl': r4300.SR_EXL,
-      '#cpu0-status-sr-erl': r4300.SR_ERL,
-      // ux
-      // sx
-      // kx
-    };
-    for (let [id, mask] of Object.entries(ids)) {
-      const elem = document.querySelector(id);
-      if (!elem) {
-        continue;
-      }
-      const set = (sr & mask) !== 0;
-      elem.classList.toggle('cpu0-status-bit-set', set);
-    }
-  }
-
-  updateMipsInterruptsRow() {
-    const miDev = n64js.hardware().miRegDevice;
-    const setBits = miDev.intrReg();
-    const enabledBits = miDev.intrMaskReg();
-
-    const ids = {
-      '#cpu0-status-mi-sp': mi.MI_INTR_SP,
-      '#cpu0-status-mi-si': mi.MI_INTR_SI,
-      '#cpu0-status-mi-ai': mi.MI_INTR_AI,
-      '#cpu0-status-mi-vi': mi.MI_INTR_VI,
-      '#cpu0-status-mi-pi': mi.MI_INTR_PI,
-      '#cpu0-status-mi-dp': mi.MI_INTR_DP,
-    }
-
-    for (let [id, mask] of Object.entries(ids)) {
-      const elem = document.querySelector(id);
-      if (!elem) {
-        continue;
-      }
-      const set = (setBits & mask) !== 0;
-      const enabled = (enabledBits & mask) !== 0;
-      elem.classList.toggle('cpu0-status-bit-enabled', enabled);
-      elem.classList.toggle('cpu0-status-bit-set', set);
-    }
-  }
-
-  /**
-   * Makes a table of co-processor 0 registers.
-   * @param {!Map<string, string>} registerColours Register colour map.
-   * @return {!jQuery}
-   */
-  makeCop0RegistersTable(registerColours) {
-    let $table = $('<table class="register-table"><tbody></tbody></table>');
-    let $body = $table.find('tbody');
-
-    const kRegistersPerRow = 2;
-
-    for (let i = 0; i < 32; i += kRegistersPerRow) {
-      let $tr = $('<tr />');
-      for (let r = 0; r < kRegistersPerRow; ++r) {
-        let name = cop0gprNames[i + r];
-        let $td = $(`<td>${name}</td><td class="fixed">${toString64(cpu0.getRegU64(i + r))}</td>`);
-
-        if (registerColours.has(name)) {
-          $td.attr('bgcolor', registerColours.get(name));
-        }
-        $tr.append($td);
-      }
-      $body.append($tr);
-    }
-
-    return $table;
-  }
-
-  /**
-   * Makes a table of co-processor 1 registers.
-   * @param {!Map<string, string>} registerColours Register colour map.
-   * @return {!jQuery}
-   */
-  makeCop1RegistersTable(registerColours) {
-    let $table = $('<table class="register-table"><tbody></tbody></table>');
-    let $body = $table.find('tbody');
-
-    for (let i = 0; i < 32; ++i) {
-      let name = cop1RegisterNames[i];
-
-      let $td;
-      if ((i & 1) === 0) {
-        $td = $(`<td>${name}</td>
-                 <td class="fixed fp-w">${toString32(cpu1.regU32[i])}</td>
-                 <td class="fixed fp-s">${cpu1.regF32[i]}</td>
-                 <td class="fixed fp-d">${cpu1.regF64[i / 2]}</td>`);
-      } else {
-        $td = $(`<td>${name}</td>
-                 <td class="fixed fp-w">${toString32(cpu1.regU32[i])}</td>
-                 <td class="fixed fp-s">${cpu1.regF32[i]}</td>
-                 <td></td>`);
-      }
-
-      let $tr = $('<tr />');
-      $tr.append($td);
-
-      if (registerColours.has(name)) {
-        $tr.attr('bgcolor', registerColours.get(name));
-      } else if (registerColours.has(name + '-w')) {
-        $tr.find('.fp-w').attr('bgcolor', registerColours.get(name + '-w'));
-      } else if (registerColours.has(name + '-s')) {
-        $tr.find('.fp-s').attr('bgcolor', registerColours.get(name + '-s'));
-      } else if (registerColours.has(name + '-d')) {
-        $tr.find('.fp-d').attr('bgcolor', registerColours.get(name + '-d'));
-      }
-
-      $body.append($tr);
-    }
-
-    return $table;
-  }
-}
-
-class RSPDebugState extends CPUDebugState {
-  disassembleRange() {
-    return disassemble_rsp.disassembleRange(rsp.imem, this.disasmAddress - 64, this.disasmAddress + 64, true);
-  }
-
-  updateStatusTable() {
-    setTextContent('#rsp-status-halted', rsp.halted);
-    setTextContent('#rsp-status-pc', toString32(rsp.pc));
-    setTextContent('#rsp-status-delaypc', toString32(rsp.delayPC));
-    setTextContent('#rsp-status-nextpc', toString32(rsp.nextPC));
-    setTextContent('#rsp-status-branchtarget', toString32(rsp.branchTarget));
-    setTextContent('#rsp-status-vco', toString16(rsp.VCO));
-    setTextContent('#rsp-status-vcc', toString16(rsp.VCC));
-    setTextContent('#rsp-status-vce', toString8(rsp.VCE));
-  }
-
-  /**
-   * Makes a table of the scalar registers.
-   * @param {!Map<string, string>} registerColours Register colour map.
-   * @return {!jQuery}
-   */
-  makeScalarRegistersTable(registerColours) {
-    let $table = $('<table class="register-table"><tbody></tbody></table>');
-    let $body = $table.find('tbody');
-
-    const kRegistersPerRow = 2;
-
-    for (let i = 0; i < 32; i += kRegistersPerRow) {
-      let $tr = $('<tr />');
-      for (let r = 0; r < kRegistersPerRow; ++r) {
-        let name = disassemble_rsp.gprNames[i + r];
-        let $td = $(`<td>${name}</td><td class="fixed">${toString32(rsp.getRegU32(i + r))}</td>`);
-
-        if (registerColours.has(name)) {
-          $td.attr('bgcolor', registerColours.get(name));
-        }
-        $tr.append($td);
-      }
-      $body.append($tr);
-    }
-
-    return $table;
-  }
-
-  /**
-   * Makes a table of the vector registers.
-   * @param {!Map<string, string>} registerColours Register colour map.
-   * @return {!jQuery}
-   */
-  makeVectorRegistersTable(registerColours) {
-    let $table = $('<table class="register-table"><tbody></tbody></table>');
-    let $body = $table.find('tbody');
-
-    for (let r = 0; r < 32; r++) {
-      let $tr = $('<tr />');
-      const name = `V${r}`;
-      $tr.append($(`<td>${name}</td>`));
-      for (let el = 0; el < 8; ++el) {
-        let $td = $(`<td class="fixed">${toHex(rsp.getVecU16(r, el), 16)}</td>`);
-        // FIXME: make this work with vector registers.
-        if (registerColours.has(name)) {
-          $td.attr('bgcolor', registerColours.get(name));
-        }
-        $tr.append($td);
-      }
-      $body.append($tr);
-    }
-    return $table;
-  }
-
-  /**
-   * Makes a table of the RSP task state.
-   * @return {!jQuery}
-   */
-  makeTaskTable() {
-    const kTaskOffset = 0x0fc0;
-    const kTaskLength = 0x40;
-    const taskMem = n64js.hardware().sp_mem.subRegion(kTaskOffset, kTaskLength);
-
-    let $table = $('<table class="register-table"><tbody></tbody></table>');
-    let $body = $table.find('tbody');
-
-    for (let i = 0; i < kTaskLength; i += 4) {
-      const $tr = $(`<tr><td>${TaskOffsets.nameOf(i)}</td><td class="fixed">${toHex(taskMem.getU32(i), 32)}</td></tr>`);
-      $body.append($tr);
-    }
-    return $table;
-  }
-}
-
 function roundDown(x, a) {
   return x & ~(a - 1);
 }
@@ -1073,4 +1113,3 @@ function setTextContent(id, text) {
     elem.textContent = text;
   }
 }
-

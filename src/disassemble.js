@@ -1,7 +1,7 @@
 /*global n64js*/
 
 import { assert } from './assert.js';
-import * as cpu0reg from './cpu0reg.js';
+import * as cpu0_constants from './cpu0_constants.js';
 import { toHex } from './format.js';
 import { simpleOp, regImmOp, specialOp, copOp, cop1BCOp, copFmtFuncOp, fd, fs, ft, offset, sa, rd, rt, rs, tlbop, imm, base, branchAddress, jumpAddress } from './decode.js';
 
@@ -61,7 +61,7 @@ class Instruction {
   }
 
   // dummy operand - just marks ra as being a dest reg
-  writesRA() { this.dstRegs[cpu0reg.RA] = 1; return ''; }
+  writesRA() { this.dstRegs[cpu0_constants.RA] = 1; return ''; }
 
   // cop1 regs
   ft_d(fmt) { const reg = this.cop1RegName(ft, fmt); this.dstRegs[reg] = 1; return this.makeFPRegSpan(reg); }
@@ -126,10 +126,6 @@ class Instruction {
   }
 }
 
-function disassembleUnknown() {
-  return '?'
-}
-
 const specialTable = [
   i => {
     if (i.opcode === 0) {
@@ -137,27 +133,27 @@ const specialTable = [
     }
     return `SLL       ${i.rd} = ${i.rt} << ${i.sa}`;
   },
-  disassembleUnknown,
+  i => 'Unk',
   i => `SRL       ${i.rd} = ${i.rt} >>> ${i.sa}`,
   i => `SRA       ${i.rd} = ${i.rt} >> ${i.sa}`,
   i => `SLLV      ${i.rd} = ${i.rt} << ${i.rs}`,
-  disassembleUnknown,
+  i => 'Unk',
   i => `SRLV      ${i.rd} = ${i.rt} >>> ${i.rs}`,
   i => `SRAV      ${i.rd} = ${i.rt} >> ${i.rs}`,
   i => `JR        ${i.rs}`,
   i => `JALR      ${i.rd}, ${i.rs}`,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
   i => `SYSCALL   ${toHex((i.opcode >> 6) & 0xfffff, 20)}`,
   i => `BREAK     ${toHex((i.opcode >> 6) & 0xfffff, 20)}`,
-  disassembleUnknown,
+  i => 'Unk',
   i => 'SYNC',
   i => `MFHI      ${i.rd} = MultHi`,
   i => `MTHI      MultHi = ${i.rs}`,
   i => `MFLO      ${i.rd} = MultLo`,
   i => `MTLO      MultLo = ${i.rs}`,
   i => `DSLLV     ${i.rd} = ${i.rt} << ${i.rs}`,
-  disassembleUnknown,
+  i => 'Unk',
   i => `DSRLV     ${i.rd} = ${i.rt} >>> ${i.rs}`,
   i => `DSRAV     ${i.rd} = ${i.rt} >> ${i.rs}`,
   i => `MULT      ${i.rs} * ${i.rt}`,
@@ -185,8 +181,8 @@ const specialTable = [
   },
   i => `XOR       ${i.rd} = ${i.rs} ^ ${i.rt}`,
   i => `NOR       ${i.rd} = ~( ${i.rs} | ${i.rt} )`,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
   i => `SLT       ${i.rd} = ${i.rs} < ${i.rt}`,
   i => `SLTU      ${i.rd} = ${i.rs} < ${i.rt}`,
   i => `DADD      ${i.rd} = ${i.rs} + ${i.rt}`,
@@ -198,15 +194,15 @@ const specialTable = [
   i => `TLT       trap( ${i.rs} < ${i.rt} )`,
   i => `TLTU      trap( ${i.rs} < ${i.rt} )`,
   i => `TEQ       trap( ${i.rs} == ${i.rt} )`,
-  disassembleUnknown,
+  i => 'Unk',
   i => `TNE       trap( ${i.rs} != ${i.rt} )`,
-  disassembleUnknown,
+  i => 'Unk',
   i => `DSLL      ${i.rd} = ${i.rt} << ${i.sa}`,
-  disassembleUnknown,
+  i => 'Unk',
   i => `DSRL      ${i.rd} = ${i.rt} >>> ${i.sa}`,
   i => `DSRA      ${i.rd} = ${i.rt} >> ${i.sa}`,
   i => `DSLL32    ${i.rd} = ${i.rt} << (32+${i.sa})`,
-  disassembleUnknown,
+  i => 'Unk',
   i => `DSRL32    ${i.rd} = ${i.rt} >>> (32+${i.sa})`,
   i => `DSRA32    ${i.rd} = ${i.rt} >> (32+${i.sa})`,
 ];
@@ -221,37 +217,37 @@ function disassembleSpecial(i) {
 const cop0Table = [
   i => `MFC0      ${i.rt} <- ${cop0ControlRegisterNames[fs(i.opcode)]}`,
   i => `DMFC0     ${i.rt} <- ${cop0ControlRegisterNames[fs(i.opcode)]}`,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
   i => `MTC0      ${i.rt} -> ${cop0ControlRegisterNames[fs(i.opcode)]}`,
   i => `DMTC0     ${i.rt} -> ${cop0ControlRegisterNames[fs(i.opcode)]}`,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 
   disassembleTLB,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 ];
 if (cop0Table.length != 32) {
   throw "Oops, didn't build the cop0 table correctly";
@@ -274,47 +270,47 @@ function disassembleBCInstr(i) {
 }
 
 function disassembleCop1Instr(i, fmt) {
-  const fmtU = fmt.toUpperCase();
+  var fmt_u = fmt.toUpperCase();
 
   switch (copFmtFuncOp(i.opcode)) {
-    case 0x00: return `ADD.${fmtU}     ${i.fd(fmt)} = ${i.fs(fmt)} + ${i.ft(fmt)}`;
-    case 0x01: return `SUB.${fmtU}     ${i.fd(fmt)} = ${i.fs(fmt)} - ${i.ft(fmt)}`;
-    case 0x02: return `MUL.${fmtU}     ${i.fd(fmt)} = ${i.fs(fmt)} * ${i.ft(fmt)}`;
-    case 0x03: return `DIV.${fmtU}     ${i.fd(fmt)} = ${i.fs(fmt)} / ${i.ft(fmt)}`;
-    case 0x04: return `SQRT.${fmtU}    ${i.fd(fmt)} = sqrt(${i.fs(fmt)})`;
-    case 0x05: return `ABS.${fmtU}     ${i.fd(fmt)} = abs(${i.fs(fmt)})`;
-    case 0x06: return `MOV.${fmtU}     ${i.fd(fmt)} = ${i.fs(fmt)}`;
-    case 0x07: return `NEG.${fmtU}     ${i.fd(fmt)} = -${i.fs(fmt)}`;
-    case 0x08: return `ROUND.L.${fmtU} ${i.fd('l')} = round.l(${i.fs(fmt)})`;
-    case 0x09: return `TRUNC.L.${fmtU} ${i.fd('l')} = trunc.l(${i.fs(fmt)})`;
-    case 0x0a: return `CEIL.L.${fmtU}  ${i.fd('l')} = ceil.l(${i.fs(fmt)})`;
-    case 0x0b: return `FLOOR.L.${fmtU} ${i.fd('l')} = floor.l(${i.fs(fmt)})`;
-    case 0x0c: return `ROUND.W.${fmtU} ${i.fd('w')} = round.w(${i.fs(fmt)})`;
-    case 0x0d: return `TRUNC.W.${fmtU} ${i.fd('w')} = trunc.w(${i.fs(fmt)})`;
-    case 0x0e: return `CEIL.W.${fmtU}  ${i.fd('w')} = ceil.w(${i.fs(fmt)})`;
-    case 0x0f: return `FLOOR.W.${fmtU} ${i.fd('w')} = floor.w(${i.fs(fmt)})`;
+    case 0x00: return `ADD.${fmt_u}     ${i.fd(fmt)} = ${i.fs(fmt)} + ${i.ft(fmt)}`;
+    case 0x01: return `SUB.${fmt_u}     ${i.fd(fmt)} = ${i.fs(fmt)} - ${i.ft(fmt)}`;
+    case 0x02: return `MUL.${fmt_u}     ${i.fd(fmt)} = ${i.fs(fmt)} * ${i.ft(fmt)}`;
+    case 0x03: return `DIV.${fmt_u}     ${i.fd(fmt)} = ${i.fs(fmt)} / ${i.ft(fmt)}`;
+    case 0x04: return `SQRT.${fmt_u}    ${i.fd(fmt)} = sqrt(${i.fs(fmt)})`;
+    case 0x05: return `ABS.${fmt_u}     ${i.fd(fmt)} = abs(${i.fs(fmt)})`;
+    case 0x06: return `MOV.${fmt_u}     ${i.fd(fmt)} = ${i.fs(fmt)}`;
+    case 0x07: return `NEG.${fmt_u}     ${i.fd(fmt)} = -${i.fs(fmt)}`;
+    case 0x08: return `ROUND.L.${fmt_u} ${i.fd('l')} = round.l(${i.fs(fmt)})`;
+    case 0x09: return `TRUNC.L.${fmt_u} ${i.fd('l')} = trunc.l(${i.fs(fmt)})`;
+    case 0x0a: return `CEIL.L.${fmt_u}  ${i.fd('l')} = ceil.l(${i.fs(fmt)})`;
+    case 0x0b: return `FLOOR.L.${fmt_u} ${i.fd('l')} = floor.l(${i.fs(fmt)})`;
+    case 0x0c: return `ROUND.W.${fmt_u} ${i.fd('w')} = round.w(${i.fs(fmt)})`;
+    case 0x0d: return `TRUNC.W.${fmt_u} ${i.fd('w')} = trunc.w(${i.fs(fmt)})`;
+    case 0x0e: return `CEIL.W.${fmt_u}  ${i.fd('w')} = ceil.w(${i.fs(fmt)})`;
+    case 0x0f: return `FLOOR.W.${fmt_u} ${i.fd('w')} = floor.w(${i.fs(fmt)})`;
 
-    case 0x20: return `CVT.S.${fmtU}   ${i.fd('s')} = (s)${i.fs(fmt)}`;
-    case 0x21: return `CVT.D.${fmtU}   ${i.fd('d')} = (d)${i.fs(fmt)}`;
-    case 0x24: return `CVT.W.${fmtU}   ${i.fd('w')} = (w)${i.fs(fmt)}`;
-    case 0x25: return `CVT.L.${fmtU}   ${i.fd('l')} = (l)${i.fs(fmt)}`;
+    case 0x20: return `CVT.S.${fmt_u}   ${i.fd('s')} = (s)${i.fs(fmt)}`;
+    case 0x21: return `CVT.D.${fmt_u}   ${i.fd('d')} = (d)${i.fs(fmt)}`;
+    case 0x24: return `CVT.W.${fmt_u}   ${i.fd('w')} = (w)${i.fs(fmt)}`;
+    case 0x25: return `CVT.L.${fmt_u}   ${i.fd('l')} = (l)${i.fs(fmt)}`;
 
-    case 0x30: return `C.F.${fmtU}     c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x31: return `C.UN.${fmtU}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x32: return `C.EQ.${fmtU}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x33: return `C.UEQ.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x34: return `C.OLT.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x35: return `C.ULT.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x36: return `C.OLE.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x37: return `C.ULE.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x38: return `C.SF.${fmtU}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x39: return `C.NGLE.${fmtU}  c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x3a: return `C.SEQ.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x3b: return `C.NGL.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x3c: return `C.LT.${fmtU}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x3d: return `C.NGE.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x3e: return `C.LE.${fmtU}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
-    case 0x3f: return `C.NGT.${fmtU}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x30: return `C.F.${fmt_u}     c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x31: return `C.UN.${fmt_u}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x32: return `C.EQ.${fmt_u}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x33: return `C.UEQ.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x34: return `C.OLT.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x35: return `C.ULT.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x36: return `C.OLE.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x37: return `C.ULE.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x38: return `C.SF.${fmt_u}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x39: return `C.NGLE.${fmt_u}  c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x3a: return `C.SEQ.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x3b: return `C.NGL.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x3c: return `C.LT.${fmt_u}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x3d: return `C.NGE.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x3e: return `C.LE.${fmt_u}    c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
+    case 0x3f: return `C.NGT.${fmt_u}   c = ${i.fs(fmt)} cmp ${i.ft(fmt)}`;
   }
 
   return `Cop1.${fmt}${toHex(copFmtFuncOp(i.opcode), 8)}?`;
@@ -342,30 +338,30 @@ const cop1Table = [
   i => `CTC1      CCR${rd(i.opcode)} = ${i.rt}`,
   i => `DCTC1     CCR${rd(i.opcode)} = ${i.rt}`,
   disassembleBCInstr,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 
   disassembleCop1SInstr,
   disassembleCop1DInstr,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
   disassembleCop1WInstr,
   disassembleCop1LInstr,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 ];
 if (cop1Table.length != 32) {
   throw "Oops, didn't build the cop1 table correctly";
@@ -383,36 +379,36 @@ const cop2Table = [
   i => `DMTC2     ${i.fs_d()} = ${i.rt}`,
   i => `CTC2      CCR${rd(i.opcode)} = ${i.rt}`,
   i => `DCTC2     CCR${rd(i.opcode)} = ${i.rt}`,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 ];
 if (cop2Table.length != 32) {
   throw "Oops, didn't build the cop2 table correctly";
 }
-function disassembleCop2(i) {
+function disassembleCop2(i) {f;
   return cop2Table[copOp(i.opcode)](i);
 }
 
@@ -425,31 +421,31 @@ const cop3Table = [
   i => `DMTC3     ${i.fs_d()} = ${i.rt}`,
   i => `CTC3      CCR${rd(i.opcode)} = ${i.rt}`,
   i => `DCTC3     CCR${rd(i.opcode)} = ${i.rt}`,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 ];
 if (cop3Table.length != 32) {
   throw "Oops, didn't build the cop3 table correctly";
@@ -475,36 +471,36 @@ const regImmTable = [
   i => `BGEZ      ${i.rs} >= 0 --> ${i.branchAddress}`,
   i => `BLTZL     ${i.rs} < 0 --> ${i.branchAddress}`,
   i => `BGEZL     ${i.rs} >= 0 --> ${i.branchAddress}`,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 
   i => `TGEI      ${i.rs} >= ${i.rt} --> trap `,
   i => `TGEIU     ${i.rs} >= ${i.rt} --> trap `,
   i => `TLTI      ${i.rs} < ${i.rt} --> trap `,
   i => `TLTIU     ${i.rs} < ${i.rt} --> trap `,
   i => `TEQI      ${i.rs} == ${i.rt} --> trap `,
-  disassembleUnknown,
+  i => 'Unk',
   i => `TNEI      ${i.rs} != ${i.rt} --> trap `,
-  disassembleUnknown,
+  i => 'Unk',
 
   i => `BLTZAL    ${i.rs} < 0 --> ${i.branchAddress}${i.writesRA()}`,
   i => `BGEZAL    ${i.rs} >= 0 --> ${i.branchAddress}${i.writesRA()}`,
   i => `BLTZALL   ${i.rs} < 0 --> ${i.branchAddress}${i.writesRA()}`,
   i => `BGEZALL   ${i.rs} >= 0 --> ${i.branchAddress}${i.writesRA()}`,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
 ];
 if (regImmTable.length != 32) {
   throw "Oops, didn't build the special table correctly";
@@ -548,10 +544,10 @@ const simpleTable = [
   i => `DADDIU    ${i.rt_d} = ${i.rs} + ${i.imm}`,
   i => `LDL       ${i.rt_d} <- ${i.memload()}`,
   i => `LDR       ${i.rt_d} <- ${i.memload()}`,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
+  i => 'Unk',
   i => `LB        ${i.rt_d} <- ${i.memload()}`,
   i => `LH        ${i.rt_d} <- ${i.memload()}`,
   i => `LWL       ${i.rt_d} <- ${i.memload()}`,
@@ -570,8 +566,8 @@ const simpleTable = [
   i => `CACHE     ${toHex(rt(i.opcode), 8)}, ${i.memaccess()}`,
   i => `LL        ${i.rt_d} <- ${i.memload()}`,
   i => `LWC1      ${i.ft_d()} <- ${i.memload()}`,
-  disassembleUnknown,
-  disassembleUnknown,
+  i => 'Unk',
+  i => 'Unk',
   i => `LLD       ${i.rt_d} <- ${i.memload()}`,
   i => `LDC1      ${i.ft_d()} <- ${i.memload()}`,
   i => `LDC2      ${i.gt_d} <- ${i.memload()}`,
@@ -579,7 +575,7 @@ const simpleTable = [
   i => `SC        ${i.rt} -> ${i.memstore()}`,
   i => `SWC1      ${i.ft()} -> ${i.memstore()}`,
   i => 'BREAKPOINT',
-  disassembleUnknown,
+  i => 'Unk',
   i => `SCD       ${i.rt} -> ${i.memstore()}`,
   i => `SDC1      ${i.ft()} -> ${i.memstore()}`,
   i => `SDC2      ${i.gt} -> ${i.memstore()}`,
@@ -600,12 +596,11 @@ export function disassembleInstruction(address, instruction, outputHTML) {
 }
 
 export function disassembleRange(beginAddr, endAddr, outputHTML) {
-  const breakpoints = n64js.breakpoints();
   const disassembly = [];
   const targets = new Set();
 
   for (let addr = beginAddr; addr < endAddr; addr += 4) {
-    const instruction = breakpoints.getInstruction(addr);
+    const instruction = n64js.getInstruction(addr);
     const d = disassembleInstruction(addr, instruction, outputHTML);
     if (d.instruction.target) {
       targets.add(d.instruction.target);

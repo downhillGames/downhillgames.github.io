@@ -27,7 +27,7 @@ export class DPSDevice extends Device {
     //this.mem.set32(ea, value);
   }
 
-  readU32(address) {
+  readS32(address) {
     this.logRead(address);
     const ea = this.calcReadEA(address);
 
@@ -35,6 +35,10 @@ export class DPSDevice extends Device {
       throw 'Read is out of range';
     }
     throw 'DPS reads are unhandled';
-    //return this.mem.getU32(ea);
+    //return this.mem.getS32(ea);
+  }
+
+  readU32(address) {
+    return this.readS32(address) >>> 0;
   }
 }

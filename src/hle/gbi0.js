@@ -1,7 +1,5 @@
 import { toString32 } from "../format.js";
 import { Vector3 } from "../graphics/Vector3.js";
-import * as rdp from "../lle/rdp.js";
-import * as rdpdis from "./disassemble_rdp.js";
 import { GBI1 } from "./gbi1.js";
 
 // GBI0 is very similar to GBI1 with a few small differences,
@@ -10,10 +8,6 @@ export class GBI0 extends GBI1 {
   constructor(state, ramDV) {
     super(state, ramDV);
     this.vertexStride = 10;
-
-    this.rdpCommandBuffer = new ArrayBuffer(0, { maxByteLength: 16 * 1024 });
-    this.rdpCommandDV = new DataView(this.rdpCommandBuffer);
-    this.rdpTriangle = new rdp.Triangle();
 
     this.gbi0Commands = new Map([
       [0xb0, this.executeUnknown.bind(this)],      // Defined as executeBranchZ for GBI1.
@@ -66,67 +60,14 @@ export class GBI0 extends GBI1 {
     }
   }
 
-  pushRDPCommandU32(value) {
-    const bufLen = this.rdpCommandBuffer.byteLength;
-    this.rdpCommandBuffer.resize(bufLen + 4);
-    this.rdpCommandDV.setUint32(bufLen, value, false);
-  }
-
-  // "RDP Command" insturctions are shared between Goldeneye and Perfect Dark.
-  // These are RDP commands for drawing triangles, baked into the display list.
-  // They seem to alternate in pairs of 0xb4 and 0xb2, and end in 0xb3.
-  // The cmd1 parts of the commands form an RDP command stream.
-  executeRDPCommandHalf1(cmd0, cmd1, dis) {
+  // Shared between Goldeneye and Perfect Dark.
+  executeRDPHalf1Goldeneye(cmd0, cmd1, dis) {
+    // These are RDP commands, baked into the display list.
+    // They seem to alternatein pairs of 0xb4 and 0xb3
+    this.warnUnimplemented('executeRDPHalf1')
     if (dis) {
-      dis.text(`gsSPRDPCommandHalf1(${toString32(cmd1)});`);
+      dis.text(`gsSPRDPHalf();`);
     }
-    this.pushRDPCommandU32(cmd1);
-  }
-
-  executeRDPCommandHalf2(cmd0, cmd1, dis) {
-    if (dis) {
-      dis.text(`gsSPRDPCommandHalf2(${toString32(cmd1)});`);
-    }
-    this.pushRDPCommandU32(cmd1);
-  }
-
-  executeRDPCommandHalf22Final(cmd0, cmd1, dis) {
-    this.warnUnimplemented('executeRDPCommandHalf22Final')
-    if (dis) {
-      dis.text(`gsSPRDPCommandHalf2Final(${toString32(cmd1)});`);
-    }
-
-    this.pushRDPCommandU32(cmd1);
-    const rdpBuf = new rdp.RDPBuffer(this.rdpCommandDV, 0, this.rdpCommandDV.byteLength);
-    this.rdpTriangle.load(rdpBuf);
-
-    // TODO: this hackily assumes GE is always rendering a screen space rectangle
-    // but ideally this should be generalised.
-    const tri = this.rdpTriangle;
-    const tileIdx = tri.tile;
-    const y0 = tri.yh;
-    const y1 = tri.ym;
-
-    const yhSpan = tri.interpolateX(tri.yh);
-    const ymSpan = tri.interpolateX(tri.ym);
-    const x0 = Math.min(yhSpan[0], ymSpan[0]);
-    const x1 = Math.max(yhSpan[1], ymSpan[1]);
-  
-    const vertices = this.renderer.calculateRectVertices(x0, y0 / 4, x1, y1 / 4);
-    const uvs = tri.calculateRectUVs();
-    const colours = [0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff];
-    this.renderer.lleRect(tileIdx, vertices, uvs, colours);
-
-    if (dis) {
-      let t = `lleRect(${tileIdx}, [${vertices}], [${uvs}], [${colours}])`;
-      const dasm = rdpdis.disassembleCommand(rdpBuf);
-      if (dasm) {
-        t += dasm.disassembly;
-      }
-      dis.tip(t);
-    }
-
-    this.rdpCommandBuffer.resize(0);
   }
 
   executeTri4(cmd0, cmd1, dis) {
@@ -178,10 +119,7 @@ export class GBI0GE extends GBI0 {
     this.vertexStride = 10;
 
     this.geCommands = new Map([
-
-      [0xb2, this.executeRDPCommandHalf2.bind(this)],
-      [0xb3, this.executeRDPCommandHalf22Final.bind(this)],
-      [0xb4, this.executeRDPCommandHalf1.bind(this)],
+      [0xb4, this.executeRDPHalf1Goldeneye.bind(this)],
     ]);
   }
 
@@ -203,10 +141,7 @@ export class GBI0PD extends GBI0 {
     this.pdCommands = new Map([
       // 0x04 - executeVertex is different from GBI0, but handled by overriding loadVertices.
       [0x07, this.executeSetVertexColorIndex.bind(this)],
-
-      [0xb2, this.executeRDPCommandHalf2.bind(this)],
-      [0xb3, this.executeRDPCommandHalf22Final.bind(this)],
-      [0xb4, this.executeRDPCommandHalf1.bind(this)],
+      [0xb4, this.executeRDPHalf1Goldeneye.bind(this)],
     ]);
   }
 

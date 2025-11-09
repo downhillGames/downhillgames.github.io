@@ -1,4 +1,3 @@
-import { makeEnum } from '../enum.js';
 import * as format from '../format.js';
 
 export const RenderMode = {
@@ -32,7 +31,7 @@ export const RenderMode = {
 };
 
 export function getRenderModeText(data) {
-  let t = '';
+  var t = '';
 
   if (data & RenderMode.AA_EN)               t += '|AA_EN';
   if (data & RenderMode.Z_CMP)               t += '|Z_CMP';
@@ -40,13 +39,13 @@ export function getRenderModeText(data) {
   if (data & RenderMode.IM_RD)               t += '|IM_RD';
   if (data & RenderMode.CLR_ON_CVG)          t += '|CLR_ON_CVG';
 
-  const cvg = data & 0x0300;
+  var cvg = data & 0x0300;
        if (cvg === RenderMode.CVG_DST_CLAMP) t += '|CVG_DST_CLAMP';
   else if (cvg === RenderMode.CVG_DST_WRAP)  t += '|CVG_DST_WRAP';
   else if (cvg === RenderMode.CVG_DST_FULL)  t += '|CVG_DST_FULL';
   else if (cvg === RenderMode.CVG_DST_SAVE)  t += '|CVG_DST_SAVE';
 
-  const zmode = data & 0x0c00;
+  var zmode = data & 0x0c00;
        if (zmode === RenderMode.ZMODE_OPA)   t += '|ZMODE_OPA';
   else if (zmode === RenderMode.ZMODE_INTER) t += '|ZMODE_INTER';
   else if (zmode === RenderMode.ZMODE_XLU)   t += '|ZMODE_XLU';
@@ -56,9 +55,12 @@ export function getRenderModeText(data) {
   if (data & RenderMode.ALPHA_CVG_SEL)       t += '|ALPHA_CVG_SEL';
   if (data & RenderMode.FORCE_BL)            t += '|FORCE_BL';
 
-  const blend = data >>> G_MDSFT_BLENDER;
-  const c0 = t.length > 0 ? t.substr(1) : '0';
-  const c1 = 'GBL_c1(' + blendOpText(blend>>>2) + ') | GBL_c2(' + blendOpText(blend) + ') /*' + format.toString16(blend) + '*/';
+  var c0 = t.length > 0 ? t.substr(1) : '0';
+
+  var blend = data >>> G_MDSFT_BLENDER;
+
+  var c1 = 'GBL_c1(' + blendOpText(blend>>>2) + ') | GBL_c2(' + blendOpText(blend) + ') /*' + format.toString16(blend) + '*/';
+
   return c0 + ', ' + c1;
 }
 
@@ -264,11 +266,11 @@ export const NumLights = makeEnum({
 export const G_TX_LOADTILE   = 7;
 export const G_TX_RENDERTILE = 0;
 
-export function getTileText(tileIdx) {
-  let t = tileIdx;
-  if (tileIdx === G_TX_LOADTILE)   t = 'G_TX_LOADTILE';
-  if (tileIdx === G_TX_RENDERTILE) t = 'G_TX_RENDERTILE';
-  return t;
+export function getTileText(tile_idx) {
+  var tile_text = tile_idx;
+  if (tile_idx === G_TX_LOADTILE)   tile_text = 'G_TX_LOADTILE';
+  if (tile_idx === G_TX_RENDERTILE) tile_text = 'G_TX_RENDERTILE';
+  return tile_text;
 }
 
 export const G_TX_WRAP       = 0x0;
@@ -324,14 +326,14 @@ export const GeometryModeGBI2 = {
 };
 
 export function getGeometryModeFlagsText(flags, data) {
-  let t = '';
+  var t = '';
 
   if (data & flags.G_ZBUFFER)               t += '|G_ZBUFFER';
   if (data & flags.G_TEXTURE_ENABLE)        t += '|G_TEXTURE_ENABLE';
   if (data & flags.G_SHADE)                 t += '|G_SHADE';
   if (data & flags.G_SHADING_SMOOTH)        t += '|G_SHADING_SMOOTH';
 
-  const cull = data & flags.G_CULL_BOTH;
+  var cull = data & flags.G_CULL_BOTH;
        if (cull === flags.G_CULL_FRONT)     t += '|G_CULL_FRONT';
   else if (cull === flags.G_CULL_BACK)      t += '|G_CULL_BACK';
   else if (cull === flags.G_CULL_BOTH)      t += '|G_CULL_BOTH';
@@ -343,6 +345,26 @@ export function getGeometryModeFlagsText(flags, data) {
   if (data & flags.G_LOD)                   t += '|G_LOD';
 
   return t.length > 0 ? t.substr(1) : '0';
+}
+
+/**
+ * Adds a nameOf function to the provided Object so that we can easily find the
+ * name for a given value. e.g.:
+ *     var name = gbi.Foo.nameOf(fooValue);
+ * @param {!Object<string, number>} values
+ * @return {!Object<string, number>}
+ */
+function makeEnum(values) {
+  values.nameOf = (value) => {
+    for (var name in values) {
+      if (Object.prototype.hasOwnProperty.call(values, name) && values[name] === value) {
+        return name;
+      }
+    }
+    return format.toString32(value);
+  };
+
+  return Object.freeze(values);
 }
 
 export const ImageFormat = makeEnum({
@@ -458,10 +480,10 @@ const blendDestFactors = [
 ];
 
 export function blendOpText(v) {
-  const m1a = (v>>>12)&0x3;
-  const m1b = (v>>> 8)&0x3;
-  const m2a = (v>>> 4)&0x3;
-  const m2b = (v>>> 0)&0x3;
+  var m1a = (v>>>12)&0x3;
+  var m1b = (v>>> 8)&0x3;
+  var m2a = (v>>> 4)&0x3;
+  var m2b = (v>>> 0)&0x3;
 
   return blendColourSources[m1a] + ',' + blendSourceFactors[m1b] + ',' + blendColourSources[m2a] + ',' + blendDestFactors[m2b];
 }

@@ -2,7 +2,6 @@
 /*global $, n64js, Stats, md5*/
 
 import { simulateBoot } from './boot.js';
-import { Breakpoints } from './breakpoints.js';
 import { Controllers } from './controllers.js';
 import { Joybus } from './joybus.js';
 import { Debugger } from './debugger.js';
@@ -16,16 +15,18 @@ import { initCPU } from './r4300.js';
 import { romdb, generateRomId, generateCICType, uint8ArrayReadString } from './romdb.js';
 import { initRSP } from './rsp.js';
 import { categoryCodeDescriptionFromU8, countryNorthAmerica, OS_TV_NTSC, tvTypeFromCountry } from './system_constants.js';
-import { UI } from './ui/ui.js';
-import { initSync, syncActive, syncTick } from './sync.js';
+import { UI } from './ui.js';
+import { initSync, syncActive, syncTick, syncInput } from './sync.js';
 import { dbgGUI } from './dbg_ui.js';
 
 window.n64js = window.n64js || {};
 
+const kOpBreakpoint = 28;
 const kCyclesPerUpdate = 100_000_000;
 
 let stats = null;
 let running = false;
+const breakpoints = new Map();     // address -> original op
 const resetCallbacks = [];
 
 const testOptions = {
@@ -45,7 +46,6 @@ const rominfo = {
 };
 
 const hardware = new Hardware(rominfo);
-const breakpoints = new Breakpoints(hardware);
 const controllers = new Controllers();
 const joybus = new Joybus(hardware, controllers.inputs);
 const ui = new UI();
@@ -126,8 +126,7 @@ n64js.debugger = () => dbg;
 n64js.loadRomAndStartRunning = (arrayBuffer) => {
   loadRom(arrayBuffer);
   n64js.reset();
-  dbg.hide();
-  // TODO: this seems a bit hacky.
+  dbg.redraw();
   setRunning(false);
   n64js.toggleRun();
 };
@@ -137,7 +136,7 @@ function runTest() {
   const req = new XMLHttpRequest();
   req.open('GET', 'roms/n64-systemtest-all.z64', true);
   req.responseType = "arraybuffer";
-  req.onload = () => {
+  req.onload = (event) => {
     const arrayBuffer = req.response; // Note: not req.responseText
     if (arrayBuffer) {
       n64js.loadRomAndStartRunning(arrayBuffer);
@@ -198,9 +197,6 @@ function updateLoopAnimframe() {
       return;
     }
 
-    // Poll for input changes.
-    controllers.updateInput();
-
     let maxCycles = kCyclesPerUpdate;
 
     // Don't slow down debugger if we're waiting for a display list to be debugged.
@@ -228,8 +224,37 @@ function updateLoopAnimframe() {
   }
 }
 
-n64js.breakpoints = () => {
-  return breakpoints;
+n64js.getInstruction = address => {
+  const instr = hardware.memMap.readMemoryInternal32(address);
+  if (isBreakpointInstruction(instr)) {
+    return breakpoints[address] || 0;
+  }
+  return instr;
+};
+
+n64js.isBreakpoint = address => {
+  const instr = hardware.memMap.readMemoryInternal32(address);
+  return isBreakpointInstruction(instr);
+};
+
+n64js.toggleBreakpoint = address => {
+  const origInstr = hardware.memMap.readMemoryInternal32(address);
+
+  let newInstr;
+  if (isBreakpointInstruction(origInstr)) {
+    // breakpoint is already set
+    newInstr = breakpoints[address] || 0;
+    delete breakpoints[address];
+  } else {
+    newInstr = (kOpBreakpoint << 26);
+    breakpoints[address] = origInstr;
+  }
+
+  hardware.memMap.writeMemoryInternal32(address, newInstr);
+};
+
+function isBreakpointInstruction(instr) {
+  return ((instr >> 26) & 0x3f) === kOpBreakpoint;
 }
 
 function getLocalStorageName(item) {
@@ -251,7 +276,15 @@ n64js.setLocalStorageItem = (name, data) => {
 //
 // Performance
 //
+let startTime;
 let lastPresentTime;
+
+n64js.emitRunningTime = (msg) => {
+  const curTime = new Date();
+  const elapsed = curTime.getTime() - startTime.getTime();
+  const elapsedStr = elapsed.toString();
+  n64js.ui().displayWarning(`Time to ${msg} ${elapsedStr}`);
+};
 
 function setFrameTime(t) {
   const titleText = rominfo.name ? `n64js - ${rominfo.name} - ${t}mspf` : `n64js - ${t}mspf`;
@@ -272,7 +305,7 @@ n64js.addResetCallback = (fn) => {
 };
 
 n64js.reset = () => {
-  breakpoints.reset();
+  breakpoints.clear();
 
   initSync();
 
@@ -288,6 +321,7 @@ n64js.reset = () => {
 
   simulateBoot(n64js.cpu0, hardware, rominfo);
 
+  startTime = new Date();
   lastPresentTime = undefined;
 
   for (let callback of resetCallbacks) {
@@ -330,6 +364,15 @@ n64js.init = () => {
   n64js.reset();
   dbg = new Debugger();
   initialiseRenderer($('#display'));
+
+  const body = document.querySelector('body');
+  body.addEventListener('keyup', (event) => {
+    controllers.handleKey(0, event.key, false);
+  });
+  body.addEventListener('keydown', (event) => {
+    controllers.handleKey(0, event.key, true);
+  });
+
   ui.domLoaded();
 };
 

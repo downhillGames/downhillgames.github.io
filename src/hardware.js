@@ -14,11 +14,9 @@ import { ROMD1A1Device, ROMD1A2Device, ROMD1A3Device, ROMD2A1Device, ROMD2A2Devi
 import { SIRegDevice } from './devices/si.js';
 import { SPMemDevice, SPIBISTDevice, SPRegDevice } from './devices/sp.js';
 import { VIRegDevice } from './devices/vi.js';
-import { RDP } from './lle/rdp.js';
 import { MemoryMap } from './memmap.js';
-import { MemoryRegion } from './memory_region.js';
+import { MemoryRegion } from './MemoryRegion.js';
 import { CPU0, CPU2 } from './r4300.js';
-import { RSP } from './rsp.js';
 import { Timeline } from './timeline.js';
 
 const kBootstrapOffset = 0x40;
@@ -39,10 +37,7 @@ class Mempack {
     }
     // Restore from local storage if provided.
     if (item && item.data) {
-      const arr = base64.decodeArray(item.data);
-      for (let i = 0; i < arr.length && i < this.data.length; i++) {
-        this.data[i] = arr[i];
-      }
+      base64.decodeArray(item.data, this.data);
     }
   }
 }
@@ -149,8 +144,6 @@ export class Hardware {
     this.cpu0 = new CPU0(this);
     this.cpu1 = new CPU1(this);
     this.cpu2 = new CPU2(this);
-    this.rsp = new RSP(this);
-    this.rdp = new RDP(this);
   }
 
   reset() {
@@ -222,10 +215,7 @@ export class Hardware {
       const memory = new MemoryRegion(new ArrayBuffer(saveSize));
       const saveItem = n64js.getLocalStorageItem('save');
       if (saveItem && saveItem.data) {
-        const arr = base64.decodeArray(saveItem.data);
-        for (let i = 0; i < arr.length && i < memory.u8.length; i++) {
-          memory.u8[i] = arr[i];
-        }
+        base64.decodeArray(saveItem.data, memory.u8);
       }
       this.saveMem = memory;
     } else {
@@ -265,7 +255,7 @@ export class Hardware {
 
   saveU8Array(name, u8arr) {
     // Store the name and id so that we can provide some kind of save management in the future
-    const d = {
+    var d = {
       name: this.rominfo.name,
       id: this.rominfo.id,
       data: base64.encodeArray(u8arr),

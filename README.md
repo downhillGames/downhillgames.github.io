@@ -12,7 +12,7 @@ A hosted version is available on GitHub pages at https://hulkholden.github.io/n6
 
 ## Development
 
-Install `bun`: https://bun.sh/.
+Install `bun`': https://bun.sh/.
 
 Compile sources (pass --watch to automatically recompile on any change):
 
@@ -82,7 +82,7 @@ LLE audio emulation seems to be the biggest performance hit. To date I've mostly
   * [ ] HLE
     * [ ] GBI0 - mostly implemented
     * [ ] GBI1 - partially implemented
-    * [ ] GIB2 - partially immplemented
+    * [ ] GIB2 - partically immplemented
   * [ ] LLE - not implemented
 * [ ] Audio
   * [ ] HLE - not implemented

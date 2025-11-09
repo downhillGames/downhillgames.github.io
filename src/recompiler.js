@@ -1,6 +1,6 @@
 /*global n64js*/
 
-import * as cpu0reg from './cpu0reg.js';
+import * as cpu0_constants from './cpu0_constants.js';
 import { convertModeCeil, convertModeFloor, convertModeRound, convertModeTrunc } from './cpu1.js';
 import { disassembleInstruction } from './disassemble.js';
 import { toString32 } from './format.js';
@@ -669,7 +669,7 @@ function generateDMFC0(ctx) {
 }
 
 function generateMTC0(ctx) {
-  if (ctx.instr_fs() === cpu0reg.controlStatus) {
+  if (ctx.instr_fs() === cpu0_constants.controlStatus) {
     ctx.fragment.cop1statusKnown = false;
   }
   const impl = `c.execMTC0(${ctx.instr_rt()}, ${ctx.instr_fs()});`;
@@ -677,7 +677,7 @@ function generateMTC0(ctx) {
 }
 
 function generateDMTC0(ctx) {
-  if (ctx.instr_fs() === cpu0reg.controlStatus) {
+  if (ctx.instr_fs() === cpu0_constants.controlStatus) {
     ctx.fragment.cop1statusKnown = false;
   }
   const impl = `c.execDMTC0(${ctx.instr_rt()}, ${ctx.instr_fs()});`;
@@ -746,7 +746,7 @@ function generateJAL(ctx) {
   const ra_hi = (ra & 0x80000000) ? -1 : 0;
   const impl = dedent(`
       c.delayPC = ${toString32(addr)};
-      c.setRegS64LoHi(${cpu0reg.RA}, ${toString32(ra)}, ${ra_hi});
+      c.setRegS64LoHi(${cpu0_constants.RA}, ${toString32(ra)}, ${ra_hi});
       `);
   return generateBranchOpBoilerplate(impl, ctx, false);
 }
@@ -880,7 +880,7 @@ function generateBLEZL(ctx) {
         c.nextPC += 4;
       }`);
 
-  return generateBranchOpBoilerplate(impl, ctx, true /* might_adjust_next_pc*/);
+  return generateBranchOpBoilerplate(impl, ctx, false);
 }
 
 // Branch Greater Than Zero
@@ -910,7 +910,7 @@ function generateBGTZL(ctx) {
         c.nextPC += 4;
       }`);
 
-  return generateBranchOpBoilerplate(impl, ctx, true /* might_adjust_next_pc*/);
+  return generateBranchOpBoilerplate(impl, ctx, false);
 }
 
 // Branch Less Than Zero

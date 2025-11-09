@@ -21,6 +21,16 @@ let fragmentMap = new Map();
  */
 let hitCounts = new Map();
 
+/**
+ * An array of invalidation events.
+ * @type {!Array<{address: number,
+ *                length: number,
+ *                system: string,
+ *                fragmentsRemoved: boolean}>}
+ */
+let fragmentInvalidationEvents = [];
+
+
 export class Fragment {
   constructor(pc) {
     this.entryPC          = pc;
@@ -92,6 +102,7 @@ export class Fragment {
 export function resetFragments() {
   hitCounts = new Map();
   fragmentMap = new Map();
+  fragmentInvalidationEvents = [];
 }
 
 /**
@@ -109,29 +120,34 @@ export function getFragmentMap() {
  */
 export function lookupFragment(pc) {
   let fragment = fragmentMap.get(pc);
-  if (fragment) {
-    // If we failed to complete the fragment for any reason, reset it
-    if (fragment.opsCompiled > 0 && !fragment.func) {
-      // console.log(`fragment ${toString32(fragment.entryPC)} partially compiled ${fragment.opsCompiled} ops, invalidating and starting over`);
-      fragment.invalidate();
+  if (!fragment) {
+    if (!debugOptions.enableDynarec) {
+      return null;
     }
-    return fragment;
+
+    // Check if this pc is hot enough yet
+    let hc = hitCounts.get(pc) || 0;
+    hc++;
+    hitCounts.set(pc, hc);
+
+    if (hc < kHotFragmentThreshold) {
+      return null;
+    }
+
+    fragment = new Fragment(pc);
+    fragmentMap.set(pc, fragment);
   }
 
-  if (!debugOptions.enableDynarec) {
-    return null;
+  // If we failed to complete the fragment for any reason, reset it
+  if (!fragment.func) {
+    fragment.invalidate();
   }
 
-  // Check if this pc is hot enough yet
-  let hc = hitCounts.get(pc) || 0;
-  hc++;
-  hitCounts.set(pc, hc);
-
-  if (hc < kHotFragmentThreshold) {
-    return null;
-  }
-
-  fragment = new Fragment(pc);
-  fragmentMap.set(pc, fragment);
   return fragment;
+}
+
+export function consumeFragmentInvalidationEvents() {
+  let t = fragmentInvalidationEvents;
+  fragmentInvalidationEvents = [];
+  return t;
 }

@@ -1,3 +1,5 @@
+import { Vector3 } from './Vector3.js';
+
 export class Vector4 {
   /**
    * @param {Float32Array=|number} opt_elems_or_x
@@ -63,10 +65,9 @@ export class Vector4 {
    * @return {number}
    */
   dot(other) {
-    let t = 0;
-    for (let i = 0; i < this.elems.length; ++i) {
+    var t = 0;
+    for (var i = 0; i < this.elems.length; ++i)
       t += this.elems[i] * other.elems[i];
-    }
     return t;
   }
 
@@ -92,9 +93,8 @@ export class Vector4 {
    * @return {!Vector4}
    */
   addInPlace(v) {
-    for (let i = 0; i < this.elems.length; ++i) {
+    for (var i = 0; i < this.elems.length; ++i)
       this.elems[i] += v.elems[i];
-    }
     return this;
   }
 
@@ -104,9 +104,8 @@ export class Vector4 {
    * @return {!Vector4}
    */
   subInPlace(v) {
-    for (let i = 0; i < this.elems.length; ++i) {
+    for (var i = 0; i < this.elems.length; ++i)
       this.elems[i] -= v.elems[i];
-    }
     return this;
   }
 
@@ -116,9 +115,8 @@ export class Vector4 {
    * @return {!Vector4}
    */
   scaleInPlace(s) {
-    for (let i = 0; i < this.elems.length; ++i) {
+    for (var i = 0; i < this.elems.length; ++i)
       this.elems[i] *= s;
-    }
     return this;
   }
 
@@ -128,9 +126,8 @@ export class Vector4 {
    * @return {!Vector4}
    */
   vecScaleInPlace(s) {
-    for (let i = 0; i < this.elems.length; ++i) {
+    for (var i = 0; i < this.elems.length; ++i)
       this.elems[i] *= s.elems[i];
-    }
     return this;
   }
 
@@ -140,9 +137,8 @@ export class Vector4 {
    * @return {!Vector4}
    */
   invVecScaleInPlace(s) {
-    for (let i = 0; i < this.elems.length; ++i){
+    for (var i = 0; i < this.elems.length; ++i)
       this.elems[i] /= s.elems[i];
-    }
     return this;
   }
 
@@ -151,7 +147,7 @@ export class Vector4 {
    * @return {!Vector4}
    */
   normaliseInPlace() {
-    let len = this.length();
+    var len = this.length();
     if (len > 0.0) {
       return this.scaleInPlace(1 / len);
     }
@@ -162,10 +158,10 @@ export class Vector4 {
   /**
    * Create a vector using the provided array of elements.
    * @param {!Array<number>} elems
-   * @return {!Vector4}
+   * @return {!Vector3}
    */
   static create(elems) {
-    const v = new Vector4();
+    var v = new Vector3();
     v.elems[0] = elems[0];
     v.elems[1] = elems[1];
     v.elems[2] = elems[2];

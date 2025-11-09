@@ -3,7 +3,7 @@ import { Tile } from "./tile.js";
 const assert = require('chai').assert;
 
 describe('Tile', () => {
-  let tile;
+  var tile;
   beforeEach(function () {
     tile = new Tile();
   });
