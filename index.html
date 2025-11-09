@@ -771,7 +771,42 @@
     });
   </script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    // n64js.init() is already called in your page — keep it as-is.
 
+    // Helper: parse ?rom=... from URL
+    function getRomUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const romParam = params.get('rom');
+      // Fallback to your default ROM if no query param:
+      return romParam || '/roms/gutterdome.z64';
+    }
+
+    async function autoloadRom() {
+      const url = getRomUrl();
+      // Add a tiny cache-buster so GH Pages refreshes quickly
+      const cacheBusted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+
+      try {
+        const res = await fetch(cacheBusted);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+        const buf = await res.arrayBuffer();
+        // Kick the emulator with the ROM buffer:
+        n64js.loadRomAndStartRunning(buf);
+      } catch (err) {
+        console.error('Autoload failed:', err);
+        // Optional: surface the error in your UI banner
+        if (n64js.ui && n64js.ui().displayError) {
+          n64js.ui().displayError('Failed to autoload ROM: ' + err.message);
+        }
+      }
+    }
+
+    // Start autoload after init:
+    autoloadRom();
+  });
+</script>
   
   <footer class="mt-4 py-3 text-center small text-secondary">
     <div>© 2025 Downhill Games • Gutterdome 64 (prototype)</div>
