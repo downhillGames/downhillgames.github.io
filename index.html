@@ -773,7 +773,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Your Google Drive file id:
+  /* ---------------------------------------------------------------------- *
+   *  AUTLOAD SETTINGS (Google Drive + Proxy Fallback)
+   * ---------------------------------------------------------------------- */
   const DRIVE_ID = '1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c';
 
   function driveDirect(id) {
@@ -782,11 +784,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function proxied(url) {
     return [
       `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      `https://cors.isomorphic-git.org/${url}`,
+      `https://cors.isomorphic-git.org/${url}`
     ];
   }
 
-  // 1) If ?rom=... is provided, use it. Otherwise try Drive (+ proxies)
   function buildCandidates() {
     const qs = new URLSearchParams(location.search).get('rom');
     if (qs) return [qs];
@@ -794,62 +795,21 @@ document.addEventListener('DOMContentLoaded', () => {
     return [direct, ...proxied(direct)];
   }
 
-  // A tiny helper to show errors in the page UI if available
+  async function fetchArrayBuffer(url) {
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
+    return res.arrayBuffer();
+  }
+
   function showError(msg) {
     console.error(msg);
     if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
     else alert(msg);
   }
 
-  async function fetchArrayBuffer(url) {
-    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
-    // CORS block or opaque response => unusable for ArrayBuffer
-    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
-    return res.arrayBuffer();
-  }
-
-  function looksLikeText(buf) {
-    const head = new Uint8Array(buf, 0, Math.min(buf.byteLength, 256));
-    let printable = 0;
-    for (let i = 0; i < head.length; i++) {
-      const b = head[i];
-      if (b === 9 || b === 10 || b === 13 || (b >= 32 && b < 127)) printable++;
-    }
-    return printable > head.length * 0.85;
-  }
-
-  function validateRom(buf) {
-    const size = buf.byteLength;
-    if (size < 4 * 1024 * 1024) throw new Error(`ROM too small: ${size} bytes`);
-    // Most good dumps are multiples of 1MB
-    if (size % (1024 * 1024) !== 0) console.warn('[autoload] ROM size is unusual (not a multiple of 1MB):', size);
-
-    // Detect LFS pointer or HTML
-    const headText = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(size, 128)));
-    if (/^version https:\/\/git-lfs.github.com\/spec\/v1/.test(headText)) {
-      throw new Error('This URL returned a Git LFS pointer, not the ROM binary.');
-    }
-    if (looksLikeText(buf) && !/^(.N64|.Z64|.V64)$/i.test(headText)) {
-      throw new Error('Got text/HTML instead of ROM bytes (Drive interstitial/CORS).');
-    }
-  }
-
-  // Ensure we only boot once
-  let booted = false;
   async function tryLoad(url) {
-    if (booted) return;
     const buf = await fetchArrayBuffer(url);
-    validateRom(buf);
-    // Optional: prompt for a click to unlock audio on some browsers
-    const ensureAudio = async () => {
-      try {
-        if (n64js && n64js.audio && n64js.audio().unlock) await n64js.audio().unlock();
-      } catch { /* ignore */ }
-    };
-    await ensureAudio();
-
     n64js.loadRomAndStartRunning(buf);
-    booted = true;
     console.log('[autoload] loaded', url, `(${buf.byteLength} bytes)`);
   }
 
@@ -858,24 +818,57 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastErr;
     for (const u of urls) {
       try { await tryLoad(u); return; }
-      catch (e) {
-        lastErr = e;
-        console.warn('[autoload] failed', u, e?.message || e);
-      }
+      catch (e) { lastErr = e; console.warn('[autoload] failed', u, e?.message || e); }
     }
     showError('Failed to autoload ROM. Tried:\n' + urls.join('\n') +
               (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : ''));
   }
 
-  // Safety: if UI is paused, unpause once after boot
-  document.addEventListener('keydown', (ev) => {
-    if (ev.key.toLowerCase() === 'p' && n64js && n64js.ui && n64js.ui().resume) n64js.ui().resume();
+  /* ---------------------------------------------------------------------- *
+   *  CLEAR / MANUAL LOAD BUTTON
+   * ---------------------------------------------------------------------- */
+  const uiContainer = document.createElement('div');
+  uiContainer.style.margin = '0.5em 0';
+  uiContainer.innerHTML = `
+    <button id="clearRomBtn" style="margin-right:0.5em;">🧹 Clear ROM</button>
+    <input type="file" id="manualRomInput" accept=".z64,.n64,.v64" style="display:none;" />
+    <label for="manualRomInput" style="cursor:pointer;background:#222;color:#fff;padding:0.3em 0.6em;border-radius:5px;">
+      💾 Load ROM Manually
+    </label>
+  `;
+  document.body.insertBefore(uiContainer, document.body.firstChild);
+
+  // Clear button logic
+  document.getElementById('clearRomBtn').addEventListener('click', () => {
+    try {
+      if (n64js && n64js.cpu0) {
+        n64js.cpu0 = null;
+      }
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      console.log('[n64js] Emulator cleared. Ready for manual load.');
+    } catch (e) {
+      console.warn('Clear failed:', e);
+    }
   });
 
+  // Manual ROM upload handler
+  document.getElementById('manualRomInput').addEventListener('change', async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    n64js.loadRomAndStartRunning(buf);
+    console.log('[manual load] Loaded local ROM:', file.name);
+  });
+
+  /* ---------------------------------------------------------------------- */
   autoloadRom();
 });
 </script>
-
 
 
   
