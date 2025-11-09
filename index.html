@@ -688,59 +688,107 @@
 
 <script defer>
   document.addEventListener('DOMContentLoaded', async function () {
-    // Point n64js at your root so its workers/assets resolve correctly.
-    // (index.html, build/, js/, roms/ are siblings in your layout.)
-    if (typeof n64js.setRootPath === 'function') {
+    // Ensure workers & assets resolve from your layout:
+    if (window.n64js && typeof n64js.setRootPath === 'function') {
       n64js.setRootPath('./');
     }
 
-    // Initialize the emulator.
-    n64js.init();
+    // Init emulator
+    if (window.n64js && typeof n64js.init === 'function') {
+      n64js.init();
+    } else {
+      console.error('n64js not ready yet. Is build/n64.min.js loaded as type="module"?');
+      return;
+    }
 
-    // Pick ROM from ?rom=... or default to your file.
-    const getParam = (k) => {
+    const log = (msg, color='#f33') => {
+      const p = document.createElement('p');
+      p.style.color = color;
+      p.style.margin = '6px 0';
+      p.textContent = msg;
+      (document.getElementById('alerts') || document.body).appendChild(p);
+    };
+
+    // Query param helper
+    const qp = (k) => {
       const m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.search);
       return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
     };
-    const romPath = getParam('rom') || 'roms/gutterdome64.z64';
 
-    // Prefer the built-in helper if available (mirrors the hosted demo behavior).
-    try {
-      if (n64js.ui && typeof n64js.ui().fetchAndRun === 'function') {
-        await n64js.ui().fetchAndRun(romPath);
-        return; // done
+    // Build candidate ROM paths (in order)
+    const romFromQP = qp('rom');
+    const candidates = romFromQP ? [romFromQP] : [
+      'roms/gutterdome64.z64',
+      './roms/gutterdome64.z64',
+      '../roms/gutterdome64.z64',
+      './gutterdome64.z64'
+    ];
+
+    // Try paths sequentially until one succeeds
+    let loaded = false;
+    for (const path of candidates) {
+      try {
+        log(`Trying ROM: ${path}`, '#888');
+        const res = await fetch(path, { cache: 'no-store' });
+        if (!res.ok) {
+          log(`❌ ${path} → HTTP ${res.status} ${res.statusText}`);
+          continue;
+        }
+        const buf = await res.arrayBuffer();
+        if (!buf || buf.byteLength < 4) {
+          log(`❌ ${path} → file too small (${buf.byteLength} bytes)`);
+          continue;
+        }
+
+        // Endianness check: first 4 bytes
+        const u8 = new Uint8Array(buf.slice(0, 4));
+        const sig = [...u8].map(b => b.toString(16).padStart(2,'0')).join(' ').toUpperCase();
+        // .z64 (big-endian) magic should be 80 37 12 40
+        const isZ64 = (u8[0] === 0x80 && u8[1] === 0x37 && u8[2] === 0x12 && u8[3] === 0x40);
+        if (!isZ64) {
+          log(`⚠️ ${path} → unexpected header ${sig}. Expected 80 37 12 40 (true .z64).`, '#d99000');
+          // We’ll still try to load it, but it might not run.
+        } else {
+          log(`✅ ${path} looks like a real .z64 (header ${sig}).`, '#0a0');
+        }
+
+        const ui = n64js.ui && n64js.ui();
+        if (ui && typeof ui.fetchAndRun === 'function' && !romFromQP) {
+          // If helper exists, let it fetch and run (but we already fetched;
+          // passing path is okay—it will refetch internally).
+          await ui.fetchAndRun(path);
+          loaded = true;
+          break;
+        } else if (ui && typeof ui.loadRomBuffer === 'function') {
+          ui.loadRomBuffer(buf, path);
+          if (typeof n64js.toggleRun === 'function') n64js.toggleRun();
+          loaded = true;
+          break;
+        } else if (ui && typeof ui.loadFileFromBuffer === 'function') {
+          ui.loadFileFromBuffer(buf, path);
+          if (typeof n64js.toggleRun === 'function') n64js.toggleRun();
+          loaded = true;
+          break;
+        } else {
+          log('❌ UI buffer loader not found (loadRomBuffer/loadFileFromBuffer).');
+        }
+      } catch (err) {
+        log(`❌ ${path} → ${err.message || err}`);
       }
-    } catch (e) {
-      console.warn('fetchAndRun failed/absent, falling back:', e);
     }
 
-    // Fallback: fetch -> load buffer -> press Run.
-    try {
-      const res = await fetch(romPath);
-      if (!res.ok) throw new Error(`ROM fetch failed: ${res.status} ${res.statusText}`);
-      const buf = await res.arrayBuffer();
-
-      // Use whichever loader exists in your build.
-      const ui = n64js.ui && n64js.ui();
-      if (ui && typeof ui.loadRomBuffer === 'function') {
-        ui.loadRomBuffer(buf, romPath);
-      } else if (ui && typeof ui.loadFileFromBuffer === 'function') {
-        ui.loadFileFromBuffer(buf, romPath);
-      } else {
-        throw new Error('No UI buffer loader found (loadRomBuffer/loadFileFromBuffer).');
-      }
-
-      // Start execution (same as clicking the Run button).
-      if (typeof n64js.toggleRun === 'function') n64js.toggleRun();
-    } catch (err) {
-      console.error('Auto-play error:', err);
-      const p = document.createElement('p');
-      p.style.color = 'red';
-      p.textContent = `Could not autoload "${romPath}". Check path/CORS, and that it’s a true .z64 (big-endian).`;
-      document.getElementById('alerts')?.appendChild(p) || document.body.appendChild(p);
+    if (!loaded) {
+      log('Autoload failed. Click “Load” and choose your ROM to verify emulator is fine.', '#f33');
+      // Add a direct link for a quick visual 404/CORS test:
+      const link = document.createElement('a');
+      link.href = candidates[0];
+      link.textContent = `Open ${candidates[0]} in a new tab`;
+      link.target = '_blank';
+      (document.getElementById('alerts') || document.body).appendChild(link);
     }
   });
 </script>
+
 
 
 </body>
