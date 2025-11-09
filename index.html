@@ -856,78 +856,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 /**
- * Hacky auto "Load → Close" tap to unstick first boot.
- * - Tries to call the same handler your Load button uses (n64js.ui().triggerLoad()).
- * - Immediately “closes” by dispatching an Escape key (many dialogs bind to Esc),
- *   and by hiding any Bootstrap modal that might have opened.
- * - Also toggles Run off→on as a belt-and-suspenders kick.
+ * Startup unstick shim:
+ *   1) Wait for the FIRST user gesture (click/tap or keypress).
+ *   2) Programmatically click the hidden #fileInput (your Load ROM control).
+ *   3) After the user cancels the dialog, give the core a tiny nudge.
  *
- * Guarded behind ?autotap=1 so you can enable/disable from the URL.
+ * Enable with ?unstick=1 (or set ALWAYS_ON = true).
  */
 (function () {
-  const params = new URLSearchParams(location.search);
-  if (!params.get('autotap')) return;
+  const ALWAYS_ON = false; // set to true if you want it always enabled
+  const enabled = ALWAYS_ON || new URLSearchParams(location.search).get('unstick') === '1';
+  if (!enabled) return;
 
-  // Wait for your page + n64js to be ready.
-  function onReady(fn) {
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      queueMicrotask(fn);
-    } else {
-      document.addEventListener('DOMContentLoaded', fn, { once: true });
-    }
+  function once(el, ev, fn) {
+    const h = (e) => { el.removeEventListener(ev, h, true); fn(e); };
+    el.addEventListener(ev, h, true);
   }
 
-  onReady(() => {
-    // Give n64js.init() and your autoloadRom() a moment to run.
-    const step = (ms, fn) => setTimeout(fn, ms);
-
-    // 1) Nudge the same handler as the toolbar "Load" button.
-    step(200, () => {
+  function tryToggleRun(delay = 120) {
+    setTimeout(() => {
       try {
-        if (window.n64js && n64js.ui && typeof n64js.ui().triggerLoad === 'function') {
-          n64js.ui().triggerLoad();
-          console.log('[autotap] invoked triggerLoad()');
+        if (window.n64js && typeof n64js.toggleRun === 'function') {
+          n64js.toggleRun();                 // pause (or toggle)
+          setTimeout(() => n64js.toggleRun(), 100); // resume
+          console.log('[unstick] toggled run');
         }
       } catch (e) {
-        console.warn('[autotap] triggerLoad() failed (expected on some browsers):', e);
+        console.warn('[unstick] toggle run failed:', e);
       }
+    }, delay);
+  }
 
-      // 2) Immediately simulate a “Close/Cancel”
-      //    a) send Escape key (many dialogs listen for this)
-      try {
-        const esc = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true });
-        document.dispatchEvent(esc);
-        console.log('[autotap] dispatched Escape');
-      } catch {}
+  function clickFileInput() {
+    const fileInput = document.getElementById('fileInput');
+    if (!fileInput) {
+      console.warn('[unstick] #fileInput not found');
+      return;
+    }
+    // Clicking the hidden file input must happen in a trusted user gesture.
+    fileInput.click();
+    console.log('[unstick] opened file dialog');
 
-      //    b) If any Bootstrap modal opened, hide it.
-      try {
-        // Bootstrap 5: find any .modal.show and click its close, else call hide via instance.
-        document.querySelectorAll('.modal.show').forEach(modalEl => {
-          const closeBtn = modalEl.querySelector('[data-bs-dismiss="modal"], .btn-close');
-          if (closeBtn) closeBtn.click();
-          else if (window.bootstrap) {
-            const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            inst.hide();
-          }
-        });
-        console.log('[autotap] hid modals (if any)');
-      } catch {}
+    /**
+     * Detect “return” from the native dialog:
+     * - 'change' fires only if a file was chosen (won’t fire on cancel)
+     * - 'focus' usually fires when the window regains focus after cancel
+     * - timer is a fallback for odd browsers
+     */
+    let done = false;
+    const markDone = () => { if (!done) { done = true; tryToggleRun(); } };
 
-      // 3) Belt-and-suspenders: briefly toggle Run to kick the core.
-      step(150, () => {
-        try {
-          if (n64js && typeof n64js.toggleRun === 'function') {
-            n64js.toggleRun();           // pause
-            step(100, () => n64js.toggleRun()); // resume
-            console.log('[autotap] toggled Run');
-          }
-        } catch {}
-      });
+    // If user actually picked a ROM, don’t interfere; we still nudge but later.
+    once(fileInput, 'change', () => {
+      console.log('[unstick] file chosen; will still nudge after a moment');
+      tryToggleRun(300);
+      done = true;
     });
-  });
+
+    // Most common path: user hits "Cancel" → window regains focus
+    once(window, 'focus', () => {
+      console.log('[unstick] focus restored (likely cancel); nudging core');
+      markDone();
+    });
+
+    // Fallback nudge in case focus detection doesn’t fire
+    setTimeout(markDone, 1200);
+  }
+
+  // Minimal UI: small one-time “Tap to Start” chip in the corner
+  function showStarterChip() {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.textContent = 'Tap to start (fix freeze)';
+    chip.style.cssText = `
+      position: fixed; inset: auto 1rem 1rem auto; z-index: 9999;
+      padding: .6rem .9rem; border-radius: 999px; border: 0;
+      box-shadow: 0 4px 14px rgba(0,0,0,.2); cursor: pointer;
+      font: 500 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    `;
+    chip.addEventListener('click', () => {
+      chip.remove();
+      clickFileInput();
+    }, { once: true });
+    document.body.appendChild(chip);
+  }
+
+  // Also allow the *very first* interaction anywhere to trigger it automatically.
+  function armGlobalFirstGesture() {
+    const handler = () => {
+      document.removeEventListener('click', handler, true);
+      document.removeEventListener('keydown', handler, true);
+      clickFileInput();
+    };
+    document.addEventListener('click', handler, true);
+    document.addEventListener('keydown', handler, true);
+  }
+
+  // Wait until DOM is ready, then arm
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { showStarterChip(); armGlobalFirstGesture(); }, { once: true });
+  } else {
+    showStarterChip();
+    armGlobalFirstGesture();
+  }
 })();
 </script>
+
 
 
 
