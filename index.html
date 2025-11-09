@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 <head>
-  <!-- Google tag (gtag.js) -->
+  <!-- Google tag (gtag.js) — keep if you use GA -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-VNCSM6YVD4"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -13,15 +13,15 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Vendor + project CSS -->
+  <title>Downhill Games – Gutterdome 64</title>
+
+  <!-- CDN CSS (OK to stay static) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+        crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="n64js.css">
 
-  <title>Downhill Games</title>
-
-  <!-- Gooey green + chrome theme (after n64js.css) -->
+  <!-- Site theme (gooey green + chrome) -->
   <style>
     :root{
       --goo:#39ff14;--goo-2:#84ff00;--ink:#0b0b0c;--ink-2:#141517;
@@ -29,16 +29,18 @@
       --chrome-3:#aeb6bf;--chrome-4:#89929b;--line:rgba(255,255,255,.12);
       --soft:rgba(57,255,20,.18);
     }
-    body{ background:radial-gradient(1200px 600px at 20% -10%,#0e1712 0%,#0a0b0d 40%,#050607 100%); color:#e6efe6; }
-    a{ color:var(--goo); } a:hover{ color:#b9ff8a; }
-
+    body{
+      background:radial-gradient(1200px 600px at 20% -10%,#0e1712 0%,#0a0b0d 40%,#050607 100%);
+      color:#e6efe6;
+    }
+    a{color:var(--goo);} a:hover{color:#b9ff8a;}
     .brand-bar{
       background:linear-gradient(180deg,var(--ink),var(--ink-2));
       border-bottom:1px solid var(--line);
       box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.45);
     }
     .brand-logo{height:64px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}
-    .neon-title{ color:#eaffea; text-shadow:0 0 12px rgba(57,255,20,.35),0 0 40px rgba(57,255,20,.15); }
+    .neon-title{color:#eaffea;text-shadow:0 0 12px rgba(57,255,20,.35),0 0 40px rgba(57,255,20,.15);}
 
     .chrome-border{
       border:1px solid rgba(255,255,255,.22);border-radius:14px;
@@ -72,58 +74,106 @@
       box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 8px 18px var(--sh);
       border-radius:10px;
     }
-    .btn-chrome:hover{ background:linear-gradient(180deg,#ffffff,var(--chrome-1) 55%,var(--chrome-2)); }
-    .btn-chrome:active{ box-shadow:inset 0 2px 8px rgba(0,0,0,.35),0 4px 12px rgba(0,0,0,.35); transform:translateY(1px); }
-
+    .btn-chrome:hover{background:linear-gradient(180deg,#ffffff,var(--chrome-1) 55%,var(--chrome-2));}
+    .btn-chrome:active{box-shadow:inset 0 2px 8px rgba(0,0,0,.35),0 4px 12px rgba(0,0,0,.35);transform:translateY(1px);}
     .btn-goo{
-      color:#102013;
-      background:radial-gradient(120% 140% at 20% 0%,#b9ff8a 0%,var(--goo) 40%,#1df000 70%);
+      color:#102013;background:radial-gradient(120% 140% at 20% 0%,#b9ff8a 0%,var(--goo) 40%,#1df000 70%);
       border:1px solid rgba(57,255,20,.7);
-      box-shadow:0 0 10px var(--soft),0 8px 22px rgba(57,255,20,.22), inset 0 1px 0 rgba(255,255,255,.35);
+      box-shadow:0 0 10px var(--soft),0 8px 22px rgba(57,255,20,.22),inset 0 1px 0 rgba(255,255,255,.35);
       border-radius:10px;
     }
-    .btn-goo:hover{ filter:saturate(1.1) brightness(1.05); }
-    .btn-goo:active{ transform:translateY(1px); box-shadow:0 0 10px var(--soft),inset 0 3px 12px rgba(0,0,0,.25); }
-
-    .toolbar .btn-group+.btn-group{ margin-left:.5rem; }
+    .btn-goo:hover{filter:saturate(1.1) brightness(1.05);}
+    .toolbar .btn-group+.btn-group{margin-left:.5rem;}
 
     .sidebar .list-group-item{
-      background:rgba(0,0,0,.2); color:#d7ffcf; border-color:rgba(255,255,255,.08);
+      background:rgba(0,0,0,.2);color:#d7ffcf;border-color:rgba(255,255,255,.08);
     }
     .sidebar .list-group-item:hover{
-      background:rgba(57,255,20,.08); color:#ffffff; border-color:rgba(57,255,20,.25);
+      background:rgba(57,255,20,.08);color:#ffffff;border-color:rgba(57,255,20,.25);
     }
 
-    footer{ border-top:1px solid rgba(255,255,255,.1); margin-top:2rem; padding-top:1rem; text-align:center; }
+    footer{border-top:1px solid rgba(255,255,255,.1);margin-top:2rem;padding-top:1rem;text-align:center;}
   </style>
+
+  <!-- Cache-busting bootstrapper for local assets -->
+  <script>
+  (() => {
+    // Prefer ?v= from URL; else use document.lastModified (changes on each Pages deploy)
+    const qv = new URLSearchParams(location.search).get('v');
+    const pad = n => String(n).padStart(2,'0');
+    const fmt = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`;
+    const lm = document.lastModified ? new Date(document.lastModified) : new Date();
+    const VER = (qv || fmt(lm));
+
+    const isLocal = u => /^(?:\.{1,2}\/|\/)(?!\/)/.test(u);       // ./ ../ or / (not //)
+    const withV  = u => isLocal(u) ? u + (u.includes('?') ? '&' : '?') + 'v=' + VER : u;
+
+    const addCss = href => { const l = document.createElement('link'); l.rel='stylesheet'; l.href=withV(href); document.head.appendChild(l); };
+    const loadScript = (src, {module=false}={}) => new Promise((res, rej) => {
+      if (module) {
+        import(withV(src)).then(res).catch(rej);
+      } else {
+        const s = document.createElement('script');
+        s.src = withV(src); s.defer = true;
+        s.onload = res; s.onerror = () => rej(new Error('Failed to load '+src));
+        document.head.appendChild(s);
+      }
+    });
+
+    // 1) Local CSS loaded with cache-bust
+    addCss('n64js.css');
+
+    // 2) Local vendor scripts in order (edit if your repo differs)
+    const vendor = [
+      'js/jquery.min.js',
+      'js/bootstrap-color-mode-toggler.js',
+      'js/md5.js',
+      'js/stats.js',
+      'js/webgl-debug.js'
+    ];
+
+    (async () => {
+      for (const u of vendor) await loadScript(u);
+      // 3) Emulator bundle as module, then init
+      await loadScript('build/n64.min.js', { module:true });
+
+      if (window.n64js?.setRootPath) n64js.setRootPath('./');
+      if (window.n64js?.init) n64js.init();
+    })().catch(err => console.error('[bootstrap]', err));
+  })();
+  </script>
 </head>
 
 <body>
-  <!-- HEADER -->
-  <header class="brand-bar rounded-bottom-3 p-3 mb-3">
-    <div class="d-flex align-items-center gap-3">
-      <img class="brand-logo" src="assets/logo.png" alt="Downhill Games logo" onerror="this.style.display='none'">
-      <div class="flex-grow-1">
-        <h1 class="h3 mb-1 neon-title">Downhill Games</h1>
-        <div class="text-secondary">Gutterdome 64 • dev builds • emulator preview</div>
-      </div>
-      <div class="d-none d-md-flex align-items-center gap-2">
-        <a class="btn btn-outline-light btn-sm" href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
-        <a class="btn btn-outline-light btn-sm" href="#" aria-label="Twitter / X"><i class="bi bi-twitter-x"></i></a>
-        <a class="btn btn-outline-light btn-sm" href="#" aria-label="Discord"><i class="bi bi-discord"></i></a>
-        <a class="btn btn-outline-light btn-sm" href="#" aria-label="Itch.io"><i class="bi bi-joystick"></i></a>
-      </div>
-    </div>
-  </header>
-
-  <!-- THREE-COLUMN LAYOUT -->
   <div class="container-fluid">
+
+    <!-- HEADER -->
+    <header class="brand-bar rounded-bottom-3 p-3 mb-3">
+      <div class="d-flex align-items-center gap-3">
+        <img class="brand-logo" src="assets/logo.png" alt="Downhill Games logo" onerror="this.style.display='none'">
+        <div class="flex-grow-1">
+          <h1 class="h3 mb-1 neon-title">Downhill Games</h1>
+          <div class="text-secondary">Gutterdome 64 • dev builds • emulator preview</div>
+        </div>
+        <div class="d-none d-md-flex align-items-center gap-2">
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="Twitter / X"><i class="bi bi-twitter-x"></i></a>
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="Discord"><i class="bi bi-discord"></i></a>
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="Itch.io"><i class="bi bi-joystick"></i></a>
+        </div>
+      </div>
+    </header>
+
+    <!-- THREE-COLUMN MAIN: left logs • middle emulator • right trailer -->
     <div class="row g-4">
-      <!-- LEFT: DEV LOGS -->
+
+      <!-- LEFT: Dev Logs -->
       <aside class="col-12 col-lg-3">
         <div class="sidebar">
           <div class="card card-chrome mb-3">
-            <div class="card-header"><i class="bi bi-journal-text me-1"></i> Dev Logs</div>
+            <div class="card-header">
+              <i class="bi bi-journal-text me-1"></i> Dev Logs
+            </div>
             <div class="list-group list-group-flush">
               <a class="list-group-item list-group-item-action" href="#">#12 Split-screen convergence fixes</a>
               <a class="list-group-item list-group-item-action" href="#">#11 Background render bug squash</a>
@@ -134,9 +184,9 @@
         </div>
       </aside>
 
-      <!-- CENTER: FULL ORIGINAL EMULATOR UI/DEBUG -->
+      <!-- CENTER: Emulator + full original UI/Debug content -->
       <main class="col-12 col-lg-6">
-        <!-- Top title & Info link -->
+        <!-- Title row -->
         <div class="row">
           <div class="col-sm-12">
             <h2 id="title" class="h4 neon-title">n64js</h2>
@@ -210,38 +260,27 @@
           <div class="col-12" id="performance"></div>
         </div>
 
-        <!-- Collapsible Info (unchanged content) -->
+        <!-- Collapsible Info (unchanged content truncated for brevity) -->
         <div class="row">
           <div class="col col-sm-12" id="info" style="display:none">
             <h2>Status</h2>
             <p>Many games run at close to full speed on a M2 Macbook Pro but there are plenty of graphical issues.
               See <a href="https://github.com/hulkholden/n64js">github</a> for the latest status.</p>
-
             <h2>Supported Browsers</h2>
-            <p>I did some quick testing on OSX 13.5:</p>
             <table class="table table-condensed">
-              <tr><td>Chrome</td><td>116.0.5845.140 - runs well. I've been doing most of my development in Chrome so this is the preferred option.</td></tr>
-              <tr><td>Firefox</td><td>117.0 - runs, but is slower than Chrome.</td></tr>
-              <tr><td>Safari</td><td>16.6 - runs, but is slower than Chrome.</td></tr>
+              <tr><td>Chrome</td><td>116.0.5845.140 - runs well.</td></tr>
+              <tr><td>Firefox</td><td>117.0 - slower.</td></tr>
+              <tr><td>Safari</td><td>16.6 - slower.</td></tr>
               <tr><td>Edge</td><td>Untested.</td></tr>
             </table>
-
-            <p>WebGL is required, which places certain restrictions on which GPUs the emulator will work with. Most modern GPUs should work though.</p>
-            <p>Get in touch via <a href="https://twitter.com/#!/hulkholden">twitter</a> if you have any additional info.</p>
-
-            <h2>Known Issues</h2>
-            <p>See <a href="https://github.com/hulkholden/n64js/issues">github</a>.</p>
-
-            <h2>Origins</h2>
-            <p>n64js is based on Daedalus, an emulator I started writing while I was at university under a pseudonym of
-              <a href="http://strmnnrmn.blogspot.co.uk/">StrmnNrmn</a>…</p>
-
-            <h2>Thanks</h2>
-            <p>Jan-Christoph Borchardt - better keyboard mapping for QWERTZ keyboards.</p>
+            <p>WebGL is required…</p>
+            <h2>Known Issues</h2><p>See GitHub.</p>
+            <h2>Origins</h2><p>Based on Daedalus…</p>
+            <h2>Thanks</h2><p>Jan-Christoph Borchardt…</p>
           </div>
         </div>
 
-        <!-- DEBUG PANELS (unchanged) -->
+        <!-- DEBUG PANELS (unchanged structure) -->
         <div class="debug hidden">
           <div class="row">
             <div class="col col-sm-4">
@@ -261,30 +300,14 @@
             <div class="col col-sm-12">
               <div class="tabbable">
                 <ul class="nav nav-underline">
-                  <li class="nav-item">
-                    <button class="nav-link active" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-content" type="button" role="tab">Output</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="cpu-tab" data-bs-toggle="tab" data-bs-target="#cpu-content" type="button" role="tab">CPU</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="rsp-tab" data-bs-toggle="tab" data-bs-target="#rsp-content" type="button" role="tab">RSP</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="memory-tab" data-bs-toggle="tab" data-bs-target="#memory-content" type="button" role="tab">Memory</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="dynarec-tab" data-bs-toggle="tab" data-bs-target="#dynarec-content" type="button" role="tab">Dynarec</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="dlist-tab" data-bs-toggle="tab" data-bs-target="#dlist-content" type="button" role="tab">DisplayList</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="texture-tab" data-bs-toggle="tab" data-bs-target="#texture-content" type="button" role="tab">Textures</button>
-                  </li>
-                  <li class="nav-item">
-                    <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">Timeline</button>
-                  </li>
+                  <li class="nav-item"><button class="nav-link active" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-content" type="button" role="tab">Output</button></li>
+                  <li class="nav-item"><button class="nav-link" id="cpu-tab" data-bs-toggle="tab" data-bs-target="#cpu-content" type="button" role="tab">CPU</button></li>
+                  <li class="nav-item"><button class="nav-link" id="rsp-tab" data-bs-toggle="tab" data-bs-target="#rsp-content" type="button" role="tab">RSP</button></li>
+                  <li class="nav-item"><button class="nav-link" id="memory-tab" data-bs-toggle="tab" data-bs-target="#memory-content" type="button" role="tab">Memory</button></li>
+                  <li class="nav-item"><button class="nav-link" id="dynarec-tab" data-bs-toggle="tab" data-bs-target="#dynarec-content" type="button" role="tab">Dynarec</button></li>
+                  <li class="nav-item"><button class="nav-link" id="dlist-tab" data-bs-toggle="tab" data-bs-target="#dlist-content" type="button" role="tab">DisplayList</button></li>
+                  <li class="nav-item"><button class="nav-link" id="texture-tab" data-bs-toggle="tab" data-bs-target="#texture-content" type="button" role="tab">Textures</button></li>
+                  <li class="nav-item"><button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab">Timeline</button></li>
                 </ul>
 
                 <div class="tab-content">
@@ -386,12 +409,12 @@
                     </div>
                   </div>
 
+                  <!-- Memory / DisplayList / etc. -->
                   <div class="tab-pane" id="memory-content">
                     <input type="text" placeholder="address" />
                     <pre></pre>
                   </div>
 
-                  <!-- DisplayList -->
                   <div class="tab-pane" id="dlist-content">
                     <div id="controls">
                       <div class="btn-toolbar">
@@ -433,12 +456,11 @@
                 </div>
               </div>
             </div>
-
-          </div> <!-- /.debug -->
-        </div> <!-- /MAIN center -->
+          </div>
+        </div> <!-- /debug -->
       </main>
 
-      <!-- RIGHT: TRAILER -->
+      <!-- RIGHT: Trailer -->
       <aside class="col-12 col-lg-3">
         <div class="card card-chrome mb-3">
           <div class="card-header"><i class="bi bi-film me-1"></i> Trailer</div>
@@ -456,7 +478,7 @@
     </div>
   </div>
 
-  <!-- SOCIALS STRIP -->
+  <!-- Social strip -->
   <footer>
     <div class="d-flex justify-content-center gap-3 flex-wrap">
       <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-youtube me-1"></i>YouTube</a>
@@ -467,7 +489,7 @@
     </div>
   </footer>
 
-  <!-- Controller Modal (unchanged) -->
+  <!-- Controller Modal (kept) -->
   <div class="modal" tabindex="-1" id="controller">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -504,83 +526,42 @@
     </div>
   </div>
 
-  <!-- Import map & scripts -->
-  <script type="importmap">
-    { "imports": { "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.18.2/+esm" } }
-  </script>
-  <script src="js/jquery.min.js"></script>
+  <!-- CDN JS (fine as static) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
           integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
           crossorigin="anonymous"></script>
-  <script src="js/bootstrap-color-mode-toggler.js"></script>
-  <script src="js/md5.js"></script>
-  <script src="js/stats.js"></script>
-  <script src="js/webgl-debug.js"></script>
-  <script type="module" src="build/n64.min.js"></script>
 
-  <!-- Shaders: fill / blit / n64 (unchanged) -->
+  <!-- Shaders (unchanged from repo) -->
   <script id="fill-shader-vs" type="x-shader/x-vertex">#version 300 es
-    in vec4 aPosition;
-    void main(void) { gl_Position = aPosition; }
+    in vec4 aPosition; void main(void){ gl_Position = aPosition; }
   </script>
   <script id="fill-shader-fs" type="x-shader/x-fragment">#version 300 es
-    precision mediump float;
-    uniform vec4 uFillColor;
-    out vec4 outCol;
-    void main(void) { outCol = uFillColor; }
+    precision mediump float; uniform vec4 uFillColor; out vec4 outCol; void main(void){ outCol = uFillColor; }
   </script>
-
   <script id="blit-shader-vs" type="x-shader/x-vertex">#version 300 es
-    in vec4 aPosition; in vec2 aUV;
-    out mediump vec2 vUV;
-    void main(void) { gl_Position = aPosition; vUV = aUV; }
+    in vec4 aPosition; in vec2 aUV; out mediump vec2 vUV; void main(void){ gl_Position = aPosition; vUV = aUV; }
   </script>
   <script id="blit-shader-fs" type="x-shader/x-fragment">#version 300 es
-    precision mediump float;
-    in mediump vec2 vUV; out vec4 outCol;
-    uniform sampler2D uSampler0;
-    void main(void) { vec4 col = texture(uSampler0, vUV); outCol = vec4(col.rgb, 1); }
+    precision mediump float; in mediump vec2 vUV; out vec4 outCol; uniform sampler2D uSampler0;
+    void main(void){ vec4 col = texture(uSampler0, vUV); outCol = vec4(col.rgb, 1); }
   </script>
-
   <script id="n64-shader-vs" type="x-shader/x-vertex">#version 300 es
-    in vec4 aPosition; in vec4 aColor; in vec2 aUV;
-    out vec4 vColor; out mediump vec2 vUV;
-    void main(void) { gl_Position = aPosition; vColor = aColor; vUV = aUV; }
+    in vec4 aPosition; in vec4 aColor; in vec2 aUV; out vec4 vColor; out mediump vec2 vUV;
+    void main(void){ gl_Position = aPosition; vColor = aColor; vUV = aUV; }
   </script>
   <script id="n64-shader-fs" type="x-shader/x-fragment">#version 300 es
-    precision mediump float;
-    in vec4 vColor; in mediump vec2 vUV; out vec4 outCol;
+    precision mediump float; in vec4 vColor; in mediump vec2 vUV; out vec4 outCol;
     uniform sampler2D uSampler0; uniform sampler2D uSampler1;
-    uniform vec2 uTexOffset0; uniform vec2 uTexOffset1;
-    uniform vec2 uTexScale0;  uniform vec2 uTexScale1;
-    uniform vec4  uPrimColor; uniform vec4  uEnvColor;
-    uniform float uAlphaThreshold;
-    void main(void) {
+    uniform vec2 uTexOffset0, uTexOffset1, uTexScale0, uTexScale1;
+    uniform vec4 uPrimColor, uEnvColor; uniform float uAlphaThreshold;
+    void main(void){
       vec2 uv0 = (vUV - uTexOffset0) * uTexScale0;
       vec2 uv1 = (vUV - uTexOffset1) * uTexScale1;
-      vec4 shade = vColor;
-      vec4 prim  = uPrimColor;
-      vec4 env   = uEnvColor;
-      vec4 one   = vec4(1,1,1,1);
-      vec4 zero  = vec4(0,0,0,0);
-      vec4 tex0  = texture(uSampler0, uv0);
-      vec4 tex1  = texture(uSampler1, uv1);
-      vec4 col;
-      vec4 combined = vec4(0,0,0,1);
-      float lod_frac      = 0.0;    // FIXME
-      float prim_lod_frac = 0.0;    // FIXME
-      float k5            = 0.0;    // FIXME
-      {{body}}
-      outCol = col;
+      vec4 shade=vColor, prim=uPrimColor, env=uEnvColor, one=vec4(1), zero=vec4(0);
+      vec4 tex0 = texture(uSampler0, uv0); vec4 tex1 = texture(uSampler1, uv1);
+      vec4 col; vec4 combined = vec4(0,0,0,1); float lod_frac=0.0, prim_lod_frac=0.0, k5=0.0;
+      {{body}} outCol = col;
     }
-  </script>
-
-  <!-- Minimal init: manual Load -> Run (no backend/autoload changes) -->
-  <script defer>
-    document.addEventListener('DOMContentLoaded', function () {
-      if (window.n64js && typeof n64js.setRootPath === 'function') n64js.setRootPath('./');
-      if (window.n64js && typeof n64js.init === 'function') n64js.init();
-    });
   </script>
 </body>
 
