@@ -1,23 +1,5 @@
 <!DOCTYPE html>
-<ht
-      </main>
-      <!-- RIGHT: Trailer -->
-      <aside class="col-12 col-lg-3">
-        <div class="card card-chrome mb-3">
-          <div class="card-header"><i class="bi bi-film me-1"></i> Trailer</div>
-          <div class="card-body">
-            <div class="ratio ratio-16x9">
-              <iframe
-                src="https://www.youtube.com/embed/R7uo1EVlHDA"
-                title="Gutterdome 64 Trailer"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen></iframe>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </div> <!-- /row -->
-ml lang="en" data-bs-theme="light">
+<html lang="en" data-bs-theme="light">
 
 <head>
   <!-- Google tag (gtag.js) -->
@@ -63,27 +45,7 @@ ml lang="en" data-bs-theme="light">
       </div>
     </div>
 
-    <div class="row g-4">
-
-      <!-- LEFT: Dev Logs -->
-      <aside class="col-12 col-lg-3">
-        <div class="sidebar">
-          <div class="card card-chrome mb-3">
-            <div class="card-header">
-              <i class="bi bi-journal-text me-1"></i> Dev Logs
-            </div>
-            <div class="list-group list-group-flush">
-              <a class="list-group-item list-group-item-action" href="#">#12 Split-screen convergence fixes</a>
-              <a class="list-group-item list-group-item-action" href="#">#11 Background render bug squash</a>
-              <a class="list-group-item list-group-item-action" href="#">#10 Menu polish pass</a>
-              <a class="list-group-item list-group-item-action" href="#">Archive…</a>
-            </div>
-          </div>
-        </div>
-      </aside>
-      <!-- CENTER: Emulator -->
-      <main class="col-12 col-lg-6">
-<div class="row toolbar">
+    <div class="row toolbar">
       <div class="col col-sm-12">
         <div class="btn-toolbar">
           
@@ -91,7 +53,6 @@ ml lang="en" data-bs-theme="light">
                 <a class="btn btn-goo" href="roms/Gutterdome64.z64" download="Gutterdome64.z64">
                   <i class="bi bi-download"></i> Download ROM
                 </a>
-                <small class="text-secondary ms-2">(If this 404s, upload <code>roms/Gutterdome64.z64</code>.)</small>
               </div>
     
               <div class="btn-group">
@@ -810,12 +771,14 @@ ml lang="en" data-bs-theme="light">
     });
   </script>
 
-
-  <footer class="mt-4 py-3 text-center small text-secondary">
-    <div>© 2025 Downhill Games • Gutterdome 64 (prototype)</div>
-    <div>Emulator powered by <a href="https://github.com/hulkholden/n64js" target="_blank" rel="noopener">n64js</a>, originally by <strong>Richard42</strong> and community contributors.</div>
+<footer class="mt-4 py-3" style="border-top:1px solid rgba(255,255,255,.1);text-align:center">
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-youtube me-1"></i>YouTube</a>
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-twitter-x me-1"></i>Twitter/X</a>
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-discord me-1"></i>Discord</a>
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-joystick me-1"></i>Itch.io</a>
+    </div>
   </footer>
-
   <style>
     body{background:radial-gradient(1200px 600px at 20% -10%,#0e1712 0%,#0a0b0d 40%,#050607 100%);color:#e6efe6;}
     #display{border-radius:12px;border:1px solid rgba(57,255,20,.45);
