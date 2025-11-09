@@ -775,52 +775,56 @@
 document.addEventListener('DOMContentLoaded', () => {
   const OWNER = 'downhillGames';
   const REPO  = 'downhillgames.github.io';
-  const REF   = 'main';
-  const DIR   = 'roms';
+  const ASSET = 'gutterdome64.z64';
+  const TAG   = 'Asset'; // your release tag name
+
+  // Candidate URLs in priority order
+  function buildCandidates() {
+    return [
+      // Latest release asset (preferred – auto-updates when you change "Latest")
+      `https://github.com/${OWNER}/${REPO}/releases/latest/download/${ASSET}`,
+      // Specific tag fallback
+      `https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${ASSET}`,
+      // Local fallback (in case you also commit it under /roms)
+      `roms/${ASSET}`
+    ];
+  }
 
   async function fetchArrayBuffer(url) {
-    const busted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-    const res = await fetch(busted);
-    if (!res.ok) {
-      // Surface both status and URL for easier debugging
-      throw new Error(`HTTP ${res.status} for ${url}`);
-    }
+    // no-store to beat CDN caching when you re-upload
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
     return res.arrayBuffer();
   }
 
-  // If GitHub API is rate-limited or blocked, this will throw with a clear message.
-  async function discoverRomViaGithub() {
-    const api = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${REF}`;
-    const res = await fetch(api, { headers: { 'Accept': 'application/vnd.github+json' }});
-    if (!res.ok) throw new Error(`GitHub API ${res.status} for ${api}`);
-    const items = await res.json();
-    const roms = (Array.isArray(items) ? items : [])
-      .filter(x => x && x.type === 'file' && /\.(z64|n64|v64)$/i.test(x.name))
-      .sort((a,b) => {
-        const ga = /gutter/i.test(a.name), gb = /gutter/i.test(b.name);
-        if (ga && !gb) return -1;
-        if (!ga && gb) return 1;
-        return a.name.localeCompare(b.name);
-      });
-    if (!roms.length) throw new Error('No *.z64|*.n64|*.v64 files found in /roms on main');
-    const name = roms[0].name;
-    return `https://raw.githubusercontent.com/${OWNER}/${REPO}/${REF}/${DIR}/${name}`;
+  async function loadRomFrom(url) {
+    const buf = await fetchArrayBuffer(url);
+
+    // Safety: if we ever hit a text file (e.g., LFS pointer), bail with a clear message
+    const head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(buf.byteLength, 64)));
+    if (/^version https:\/\/git-lfs.github.com\/spec\/v1/.test(head)) {
+      throw new Error('This URL returned a Git LFS pointer (text), not the ROM binary.');
+    }
+
+    n64js.loadRomAndStartRunning(buf);
+    console.log('[autoload] loaded', url);
   }
 
   async function autoloadRom() {
-    try {
-      const params = new URLSearchParams(location.search);
-      const userRom = params.get('rom');
-      const romUrl = userRom || await discoverRomViaGithub();
-      const buf = await fetchArrayBuffer(romUrl);
-      n64js.loadRomAndStartRunning(buf);
-      console.log('[autoload] loaded', romUrl);
-    } catch (e) {
-      const msg = 'Failed to autoload ROM: ' + (e && (e.message || e.statusText || String(e)));
-      console.error('[autoload] failed:', e);
-      if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
-      else alert(msg);
+    const params = new URLSearchParams(location.search);
+    const userRom = params.get('rom');
+    const urls = userRom ? [userRom] : buildCandidates();
+
+    let lastErr;
+    for (const url of urls) {
+      try { await loadRomFrom(url); return; }
+      catch (e) { lastErr = e; console.warn('[autoload] failed', e?.message || e); }
     }
+
+    const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n') +
+                (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : '');
+    if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
+    else alert(msg);
   }
 
   autoloadRom();
