@@ -20,29 +20,140 @@
 
   <title>Downhill Games</title>
 
-  <style>
-    /* small helpers for layout polish */
-    .brand-bar {
-      background: linear-gradient(180deg, #0b0b0b, #151515);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .brand-logo {
-      height: 56px; width: auto; object-fit: contain;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
-    }
-    .sidebar {
-      position: sticky; top: 16px;
-    }
-    .card iframe {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border: 0;
-      border-radius: .5rem;
-    }
-    @media (max-width: 991.98px) {
-      .sidebar { position: static; }
-    }
-  </style>
+<style>
+  :root{
+    --goo: #39ff14;           /* neon slime */
+    --goo-2: #84ff00;
+    --ink: #0b0b0c;           /* deep black */
+    --ink-2:#141517;
+    --chrome-0:#f7fafc;       /* chrome gradient stops */
+    --chrome-1:#e6eaee;
+    --chrome-2:#cfd6dc;
+    --chrome-3:#aeb6bf;
+    --chrome-4:#89929b;
+    --line: rgba(255,255,255,.12);
+    --soft: rgba(57,255,20,.18);  /* green glow */
+  }
+
+  /* page & header */
+  body{ background: radial-gradient(1200px 600px at 20% -10%, #0e1712 0%, #0a0b0d 40%, #050607 100%); }
+  .brand-bar{
+    background: linear-gradient(180deg, var(--ink), var(--ink-2));
+    border-bottom: 1px solid var(--line);
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.45);
+  }
+  .brand-logo{ height:64px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .brand-bar h1, .brand-bar .text-secondary{ color:#e8f2ec; }
+  a{ color: var(--goo); }
+  a:hover{ color: #b9ff8a; }
+
+  /* chrome border & cards */
+  .chrome-border{
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0)) padding-box,
+      linear-gradient(180deg, var(--chrome-0), var(--chrome-2) 40%, var(--chrome-4)) border-box;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.25) inset,
+      0 0 0 1px rgba(0,0,0,.4),
+      0 12px 28px rgba(0,0,0,.45);
+    backdrop-filter: blur(4px);
+  }
+  .card.card-chrome{
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 14px;
+    box-shadow: 0 10px 26px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .card.card-chrome .card-header{
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+    color:#e6ffe0;
+  }
+
+  /* gooey neon canvas frame */
+  #display{
+    border-radius: 12px;
+    border: 1px solid rgba(57,255,20,.45);
+    box-shadow:
+      0 0 12px var(--soft),
+      0 0 36px rgba(57,255,20,.14),
+      inset 0 0 18px rgba(57,255,20,.08);
+    background-color:#000;
+  }
+
+  /* buttons: chrome + goo variants */
+  .btn-chrome{
+    --sh: rgba(0,0,0,.45);
+    color:#0f1411;
+    background:
+      linear-gradient(180deg, var(--chrome-0), var(--chrome-2) 55%, var(--chrome-3));
+    border: 1px solid rgba(0,0,0,.45);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.6) inset,
+      0 8px 18px var(--sh);
+  }
+  .btn-chrome:hover{
+    background: linear-gradient(180deg, #ffffff, var(--chrome-1) 55%, var(--chrome-2));
+  }
+  .btn-chrome:active{
+    box-shadow:
+      inset 0 2px 8px rgba(0,0,0,.35),
+      0 4px 12px rgba(0,0,0,.35);
+    transform: translateY(1px);
+  }
+
+  .btn-goo{
+    color:#102013;
+    background: radial-gradient(120% 140% at 20% 0%, #b9ff8a 0%, var(--goo) 40%, #1df000 70%);
+    border: 1px solid rgba(57,255,20,.7);
+    box-shadow:
+      0 0 10px var(--soft),
+      0 8px 22px rgba(57,255,20,.22),
+      inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .btn-goo:hover{
+    filter: saturate(1.1) brightness(1.05);
+    box-shadow:
+      0 0 14px var(--soft),
+      0 12px 28px rgba(57,255,20,.28),
+      inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .btn-goo:active{
+    transform: translateY(1px);
+    box-shadow:
+      0 0 10px var(--soft),
+      inset 0 3px 12px rgba(0,0,0,.25);
+  }
+
+  /* toolbar polish */
+  .toolbar .btn{ border-radius: 10px; }
+  .toolbar .btn-group + .btn-group{ margin-left:.5rem; }
+
+  /* sidebar pins */
+  .sidebar .list-group-item{
+    background: rgba(0,0,0,.2);
+    color:#d7ffcf;
+    border-color: rgba(255,255,255,.08);
+  }
+  .sidebar .list-group-item:hover{
+    background: rgba(57,255,20,.08);
+    color:#ffffff;
+    border-color: rgba(57,255,20,.25);
+  }
+
+  /* small neon accents */
+  .neon-title{
+    color: #eaffea;
+    text-shadow: 0 0 12px rgba(57,255,20,.35), 0 0 40px rgba(57,255,20,.15);
+  }
+  .divider{
+    height:1px; background: linear-gradient(90deg, transparent, rgba(57,255,20,.45), transparent);
+    margin: .5rem 0 1rem 0;
+  }
+</style>
+
 </head>
 
 <body>
