@@ -854,6 +854,80 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
+<script>
+/**
+ * Hacky auto "Load → Close" tap to unstick first boot.
+ * - Tries to call the same handler your Load button uses (n64js.ui().triggerLoad()).
+ * - Immediately “closes” by dispatching an Escape key (many dialogs bind to Esc),
+ *   and by hiding any Bootstrap modal that might have opened.
+ * - Also toggles Run off→on as a belt-and-suspenders kick.
+ *
+ * Guarded behind ?autotap=1 so you can enable/disable from the URL.
+ */
+(function () {
+  const params = new URLSearchParams(location.search);
+  if (!params.get('autotap')) return;
+
+  // Wait for your page + n64js to be ready.
+  function onReady(fn) {
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      queueMicrotask(fn);
+    } else {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    }
+  }
+
+  onReady(() => {
+    // Give n64js.init() and your autoloadRom() a moment to run.
+    const step = (ms, fn) => setTimeout(fn, ms);
+
+    // 1) Nudge the same handler as the toolbar "Load" button.
+    step(200, () => {
+      try {
+        if (window.n64js && n64js.ui && typeof n64js.ui().triggerLoad === 'function') {
+          n64js.ui().triggerLoad();
+          console.log('[autotap] invoked triggerLoad()');
+        }
+      } catch (e) {
+        console.warn('[autotap] triggerLoad() failed (expected on some browsers):', e);
+      }
+
+      // 2) Immediately simulate a “Close/Cancel”
+      //    a) send Escape key (many dialogs listen for this)
+      try {
+        const esc = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true });
+        document.dispatchEvent(esc);
+        console.log('[autotap] dispatched Escape');
+      } catch {}
+
+      //    b) If any Bootstrap modal opened, hide it.
+      try {
+        // Bootstrap 5: find any .modal.show and click its close, else call hide via instance.
+        document.querySelectorAll('.modal.show').forEach(modalEl => {
+          const closeBtn = modalEl.querySelector('[data-bs-dismiss="modal"], .btn-close');
+          if (closeBtn) closeBtn.click();
+          else if (window.bootstrap) {
+            const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            inst.hide();
+          }
+        });
+        console.log('[autotap] hid modals (if any)');
+      } catch {}
+
+      // 3) Belt-and-suspenders: briefly toggle Run to kick the core.
+      step(150, () => {
+        try {
+          if (n64js && typeof n64js.toggleRun === 'function') {
+            n64js.toggleRun();           // pause
+            step(100, () => n64js.toggleRun()); // resume
+            console.log('[autotap] toggled Run');
+          }
+        } catch {}
+      });
+    });
+  });
+})();
+</script>
 
 
 
