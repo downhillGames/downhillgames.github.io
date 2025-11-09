@@ -1,9 +1,41 @@
 <!DOCTYPE html>
-<ht
-      </main>
-      <!-- RIGHT: Trailer -->
-      <aside class="col-12 col-lg-3">
-        
+<html lang="en" data-bs-theme="light">
+
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VNCSM6YVD4"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-VNCSM6YVD4');
+  </script>
+
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="n64js.css">
+
+  <title>n64js - An N64 Emulator in JavaScript</title>
+</head>
+
+<body>
+<div class="brand-bar rounded-bottom-3 p-3 mb-3" style="
+    background:linear-gradient(180deg,#0b0b0c,#141517);
+    border-bottom:1px solid rgba(255,255,255,.12);
+    box-shadow:inset 0 -1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.45);
+  ">
+    <div class="container d-flex align-items-center gap-3">
+      <img src="assets/logo.png" alt="Downhill Games" style="height:56px" onerror="this.style.display='none'">
+      <div class="flex-grow-1">
+        <h1 class="h4 m-0" style="color:#eaffea;text-shadow:0 0 12px rgba(57,255,20,.35),0 0 40px rgba(57,255,20,.15)">Downhill Games</h1>
+        <div class="text-secondary">Gutterdome 64 • emulator preview</div>
+      </div>
     </div>
   <div class="container-fluid">
     <div class="row">
@@ -13,38 +45,10 @@
       </div>
     </div>
 
-    <div class="container-fluid mt-3">
-  <div class="row g-4 align-items-start">
-
-  <!-- LEFT: Dev Logs -->
-  <aside class="col-12 col-lg-3">
-    <div class="sidebar">
-      <div class="card card-chrome mb-3">
-        <div class="card-header">
-          <i class="bi bi-journal-text me-1"></i> Dev Logs
-        </div>
-        <div class="list-group list-group-flush">
-          <a class="list-group-item list-group-item-action" href="#">#12 Split-screen convergence fixes</a>
-          <a class="list-group-item list-group-item-action" href="#">#11 Background render bug squash</a>
-          <a class="list-group-item list-group-item-action" href="#">#10 Menu polish pass</a>
-          <a class="list-group-item list-group-item-action" href="#">Archive…</a>
-        </div>
-      </div>
-    </div>
-  </aside>
-  <main class="col-12 col-lg-6">
-<div class="row toolbar">
+    <div class="row toolbar">
       <div class="col col-sm-12">
         <div class="btn-toolbar">
-          
-              <div class="btn-group">
-                <a class="btn btn-goo" href="roms/Gutterdome64.z64" download="Gutterdome64.z64">
-                  <i class="bi bi-download"></i> Download ROM
-                </a>
-                <small class="text-secondary ms-2">(If this 404s, upload <code>roms/Gutterdome64.z64</code>.)</small>
-              </div>
-    
-              <div class="btn-group">
+          <div class="btn-group">
             <button type="button" class="btn" onclick="n64js.ui().triggerLoad()">
               <i class="bi bi-file-earmark-binary"></i> Load</button>
           </div>
@@ -366,26 +370,7 @@
                         </li>
                       </ul>
                       <div class="tab-content">
-                        <div id="cpu0-content" class="tab-pane active">  </main>
-
-  <!-- RIGHT: Trailer -->
-  <aside class="col-12 col-lg-3">
-    <div class="card card-chrome mb-3">
-      <div class="card-header"><i class="bi bi-film me-1"></i> Trailer</div>
-      <div class="card-body">
-        <div class="ratio ratio-16x9">
-          <iframe
-            src="https://www.youtube.com/embed/R7uo1EVlHDA"
-            title="Gutterdome 64 Trailer"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen></iframe>
-        </div>
-      </div>
-    </div>
-  </aside>
-  </div>
-</div>
-</div>
+                        <div id="cpu0-content" class="tab-pane active"></div>
                         <div id="cpu1-content" class="tab-pane"></div>
                       </div>
                     </div>
@@ -779,14 +764,14 @@
     });
   </script>
 
-
-  
-  <footer class="mt-4 py-3 text-center small text-secondary">
-    <div>© 2025 Downhill Games • Gutterdome 64 (prototype)</div>
-    <div>Emulator powered by <a href="https://github.com/hulkholden/n64js" target="_blank" rel="noopener">n64js</a>, originally by <strong>Richard42</strong> and community contributors.</div>
+<footer class="mt-4 py-3" style="border-top:1px solid rgba(255,255,255,.1);text-align:center">
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-youtube me-1"></i>YouTube</a>
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-twitter-x me-1"></i>Twitter/X</a>
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-discord me-1"></i>Discord</a>
+      <a class="btn btn-outline-light btn-sm" href="#"><i class="bi bi-joystick me-1"></i>Itch.io</a>
+    </div>
   </footer>
-
-
   <style>
     body{background:radial-gradient(1200px 600px at 20% -10%,#0e1712 0%,#0a0b0d 40%,#050607 100%);color:#e6efe6;}
     #display{border-radius:12px;border:1px solid rgba(57,255,20,.45);
