@@ -773,7 +773,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  /* ================== CONFIG (Google Drive) ================== */
+  /* ------------ Config: Google Drive file ------------- */
   const DRIVE_ID = '1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c';
   const driveDirect = id => `https://drive.google.com/uc?export=download&id=${id}`;
   const proxied = url => [
@@ -781,14 +781,44 @@ document.addEventListener('DOMContentLoaded', () => {
     `https://cors.isomorphic-git.org/${url}`,
   ];
 
-  /* ================== STATE / GUARDS ================== */
-  let booted = false;
+  /* ------------ State / cancel guards ------------- */
   let autoloadDisabled = false;
   const autoloadAbort = new AbortController();
-  const once = fn => { let ran=false; return (...a)=>{ if(ran) return; ran=true; return fn(...a);} };
-  const setBooted = once(()=>{ booted = true; });
 
-  /* ================== UI BUTTONS ================== */
+  function buildCandidates() {
+    const qs = new URLSearchParams(location.search).get('rom');
+    if (qs) return [qs];
+    const direct = driveDirect(DRIVE_ID);
+    return [direct, ...proxied(direct)];
+  }
+
+  function showError(msg){
+    console.error(msg);
+    (n64js.ui && n64js.ui().displayError) ? n64js.ui().displayError(msg) : alert(msg);
+  }
+
+  async function fetchArrayBuffer(url, signal) {
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow', signal });
+    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
+    return res.arrayBuffer();
+  }
+
+  /* ------------ Load using the SAME path as the manual UI ------------- */
+  async function loadViaUiFile(buf, filename='gutterdome64.z64') {
+    const u8 = (buf instanceof ArrayBuffer) ? new Uint8Array(buf) : buf;
+    // Create a File so n64js.ui().loadFile runs the exact manual pipeline
+    const file = new File([u8], filename, { type: 'application/octet-stream', lastModified: Date.now() });
+    if (n64js.ui && typeof n64js.ui().loadFile === 'function') {
+      await n64js.ui().loadFile(file);
+    } else if (typeof n64js.loadRomAndStartRunning === 'function') {
+      // Fallback, but the UI path is preferred
+      n64js.loadRomAndStartRunning(u8.buffer);
+    } else {
+      throw new Error('No load method available on n64js.');
+    }
+  }
+
+  /* ------------ Clear + Manual controls ------------- */
   const ui = document.createElement('div');
   ui.style.margin = '0.5em 0';
   ui.innerHTML = `
@@ -798,40 +828,14 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.insertBefore(ui, document.body.firstChild);
 
-  const btnClear  = document.getElementById('n64-clear');
-  const inpFile   = document.getElementById('n64-file');
-  const lblManual = document.getElementById('n64-manual');
+  const btnClear = document.getElementById('n64-clear');
+  const inpFile  = document.getElementById('n64-file');
+  const lblMan   = document.getElementById('n64-manual');
 
-  function showError(msg){
-    console.error(msg);
-    (n64js.ui && n64js.ui().displayError) ? n64js.ui().displayError(msg) : alert(msg);
-  }
-
-  function buildCandidates() {
-    const qs = new URLSearchParams(location.search).get('rom');
-    if (qs) return [qs];
-    const direct = driveDirect(DRIVE_ID);
-    return [direct, ...proxied(direct)];
-  }
-
-  async function fetchArrayBuffer(url, signal) {
-    const res = await fetch(url, { cache: 'no-store', redirect: 'follow', signal });
-    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
-    return res.arrayBuffer();
-  }
-
-  // Ensure only 1 load runs; abort autoload if user interacts.
-  async function loadBuffer(buf) {
-    if (autoloadAbort.signal.aborted) { /* manual took over; fine */ }
-    n64js.loadRomAndStartRunning(buf);
-    setBooted();
-  }
-
-  // ---- CLEAR button
   btnClear.addEventListener('click', () => {
+    autoloadDisabled = true;
+    if (!autoloadAbort.signal.aborted) autoloadAbort.abort('clear');
     try {
-      autoloadDisabled = true;
-      if (!autoloadAbort.signal.aborted) autoloadAbort.abort('clear');
       if (n64js && n64js.cpu0) n64js.cpu0 = null;
       const c = document.querySelector('canvas');
       if (c) { const g = c.getContext('2d'); g.fillStyle = 'black'; g.fillRect(0,0,c.width,c.height); }
@@ -839,8 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { console.warn('clear failed:', e); }
   });
 
-  // ---- MANUAL loader: abort autoload immediately, then load selected file
-  lblManual.addEventListener('click', () => {
+  lblMan.addEventListener('click', () => {
     autoloadDisabled = true;
     if (!autoloadAbort.signal.aborted) autoloadAbort.abort('manual-start');
   });
@@ -849,36 +852,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const file = ev.target.files?.[0];
     if (!file) return;
     try {
-      const buf = await file.arrayBuffer();
-      await loadBuffer(buf);
-      console.log('[manual] loaded', file.name, `(${buf.byteLength} bytes)`);
+      // Use the exact UI path even for manual file (keeps things consistent)
+      if (n64js.ui && typeof n64js.ui().loadFile === 'function') {
+        await n64js.ui().loadFile(file);
+      } else {
+        const buf = await file.arrayBuffer();
+        n64js.loadRomAndStartRunning(buf);
+      }
+      console.log('[manual] loaded', file.name);
     } catch (e) {
       showError('Manual load failed: ' + (e.message || String(e)));
     } finally {
-      // allow re-selecting the same file later
       ev.target.value = '';
     }
   });
 
-  // ---- AUTOLOAD (cancelable)
+  /* ------------ Autoload (cancelable) ------------- */
   async function autoloadRom() {
-    if (autoloadDisabled) return; // user interacted first
+    if (autoloadDisabled) return;
     const urls = buildCandidates();
     let lastErr;
     for (const u of urls) {
       try {
-        if (autoloadDisabled) return; // bail if user started manual
+        if (autoloadDisabled) return;
         const buf = await fetchArrayBuffer(u, autoloadAbort.signal);
         if (autoloadDisabled || autoloadAbort.signal.aborted) return;
-        await loadBuffer(buf);
-        console.log('[autoload] loaded', u, `(${buf.byteLength} bytes)`);
+        await loadViaUiFile(buf, 'gutterdome64.z64');
+        console.log('[autoload] loaded', u);
         return;
       } catch (e) {
         if (e.name === 'AbortError') { console.log('[autoload] aborted'); return; }
         lastErr = e; console.warn('[autoload] failed', u, e?.message || e);
       }
     }
-    if (!booted && !autoloadDisabled) {
+    if (!autoloadDisabled) {
       showError('Failed to autoload ROM. Tried:\n' + urls.join('\n') +
                 (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : ''));
     }
@@ -887,6 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
   autoloadRom();
 });
 </script>
+
 
 
   
