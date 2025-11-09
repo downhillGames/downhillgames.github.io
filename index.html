@@ -771,6 +771,104 @@
     });
   </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  /* ---------------------------------------------------------------------- *
+   *  AUTLOAD SETTINGS (Google Drive + Proxy Fallback)
+   * ---------------------------------------------------------------------- */
+  const DRIVE_ID = '1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c';
+
+  function driveDirect(id) {
+    return `https://drive.google.com/uc?export=download&id=${id}`;
+  }
+  function proxied(url) {
+    return [
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      `https://cors.isomorphic-git.org/${url}`
+    ];
+  }
+
+  function buildCandidates() {
+    const qs = new URLSearchParams(location.search).get('rom');
+    if (qs) return [qs];
+    const direct = driveDirect(DRIVE_ID);
+    return [direct, ...proxied(direct)];
+  }
+
+  async function fetchArrayBuffer(url) {
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
+    return res.arrayBuffer();
+  }
+
+  function showError(msg) {
+    console.error(msg);
+    if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
+    else alert(msg);
+  }
+
+  async function tryLoad(url) {
+    const buf = await fetchArrayBuffer(url);
+    n64js.loadRomAndStartRunning(buf);
+    console.log('[autoload] loaded', url, `(${buf.byteLength} bytes)`);
+  }
+
+  async function autoloadRom() {
+    const urls = buildCandidates();
+    let lastErr;
+    for (const u of urls) {
+      try { await tryLoad(u); return; }
+      catch (e) { lastErr = e; console.warn('[autoload] failed', u, e?.message || e); }
+    }
+    showError('Failed to autoload ROM. Tried:\n' + urls.join('\n') +
+              (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : ''));
+  }
+
+  /* ---------------------------------------------------------------------- *
+   *  CLEAR / MANUAL LOAD BUTTON
+   * ---------------------------------------------------------------------- */
+  const uiContainer = document.createElement('div');
+  uiContainer.style.margin = '0.5em 0';
+  uiContainer.innerHTML = `
+    <button id="clearRomBtn" style="margin-right:0.5em;">🧹 Clear ROM</button>
+    <input type="file" id="manualRomInput" accept=".z64,.n64,.v64" style="display:none;" />
+    <label for="manualRomInput" style="cursor:pointer;background:#222;color:#fff;padding:0.3em 0.6em;border-radius:5px;">
+      💾 Load ROM Manually
+    </label>
+  `;
+  document.body.insertBefore(uiContainer, document.body.firstChild);
+
+  // Clear button logic
+  document.getElementById('clearRomBtn').addEventListener('click', () => {
+    try {
+      if (n64js && n64js.cpu0) {
+        n64js.cpu0 = null;
+      }
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      console.log('[n64js] Emulator cleared. Ready for manual load.');
+    } catch (e) {
+      console.warn('Clear failed:', e);
+    }
+  });
+
+  // Manual ROM upload handler
+  document.getElementById('manualRomInput').addEventListener('change', async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    n64js.loadRomAndStartRunning(buf);
+    console.log('[manual load] Loaded local ROM:', file.name);
+  });
+
+  /* ---------------------------------------------------------------------- */
+  autoloadRom();
+});
+</script>
 
 
   
