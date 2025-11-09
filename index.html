@@ -772,41 +772,57 @@
   </script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', async function () {
-    // n64js.init() is already called in your page — keep it as-is.
+document.addEventListener('DOMContentLoaded', () => {
+  // Keep your existing n64js.init() call elsewhere
 
-    // Helper: parse ?rom=... from URL
-    function getRomUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const romParam = params.get('rom');
-      // Fallback to your default ROM if no query param:
-      return romParam || '/roms/gutterdome.z64';
-    }
+  async function tryFetch(url) {
+    const busted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+    const res = await fetch(busted);
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return res.arrayBuffer();
+  }
 
-    async function autoloadRom() {
-      const url = getRomUrl();
-      // Add a tiny cache-buster so GH Pages refreshes quickly
-      const cacheBusted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+  function candidatesFrom(paramOrDefault) {
+    // If user supplied ?rom=..., trust that path as-is (relative or absolute)
+    if (paramOrDefault) return [paramOrDefault];
 
+    // Otherwise try smart fallbacks (project page vs custom domain)
+    const rel = 'roms/gutterdome.z64';      // no leading slash
+    const dir = window.location.pathname.replace(/[^/]*$/, ''); // current dir
+    const inDir = dir + 'roms/gutterdome.z64';
+    const abs = '/' + ['','roms','gutterdome.z64'].join('/').replace(/\/+/g,'/'); // "/roms/gutterdome.z64"
+    // Order: relative (works for project pages), then same-dir, then absolute (works for custom domains)
+    return [rel, inDir, abs];
+  }
+
+  async function autoloadRom() {
+    const params = new URLSearchParams(window.location.search);
+    const userRom = params.get('rom'); // can be absolute or relative
+    const urls = candidatesFrom(userRom);
+
+    let lastErr;
+    for (const url of urls) {
       try {
-        const res = await fetch(cacheBusted);
-        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-        const buf = await res.arrayBuffer();
-        // Kick the emulator with the ROM buffer:
+        console.log('[autoload] trying', url);
+        const buf = await tryFetch(url);
         n64js.loadRomAndStartRunning(buf);
-      } catch (err) {
-        console.error('Autoload failed:', err);
-        // Optional: surface the error in your UI banner
-        if (n64js.ui && n64js.ui().displayError) {
-          n64js.ui().displayError('Failed to autoload ROM: ' + err.message);
-        }
+        console.log('[autoload] loaded', url);
+        return;
+      } catch (e) {
+        lastErr = e;
+        console.warn('[autoload] failed', e.message);
       }
     }
 
-    // Start autoload after init:
-    autoloadRom();
-  });
+    const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n');
+    if (n64js.ui && n64js.ui().displayError) n64js.ui().displayError(msg);
+    else alert(msg);
+  }
+
+  autoloadRom();
+});
 </script>
+
   
   <footer class="mt-4 py-3 text-center small text-secondary">
     <div>© 2025 Downhill Games • Gutterdome 64 (prototype)</div>
