@@ -773,167 +773,86 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  /* ================= CONFIG: Google Drive ================= */
+  // Your Google Drive share link:
+  // https://drive.google.com/file/d/1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c/view
   const DRIVE_ID = '1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c';
-  const driveDirect = id => `https://drive.google.com/uc?export=download&id=${id}`;
-  const proxied = url => [
-    `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    `https://cors.isomorphic-git.org/${url}`,
-  ];
 
-  /* ================= STATE / CANCEL ================= */
-  let autoloadDisabled = false;
-  let autoloadAbort = new AbortController();
-
-  /* ================= UI WIRING ================= */
-  const uiWrap = document.createElement('div');
-  uiWrap.style.margin = '0.5em 0';
-  uiWrap.innerHTML = `
-    <button id="n64-clear" style="margin-right:.5em;">🧹 Clear</button>
-    <input type="file" id="n64-file" accept=".z64,.n64,.v64" style="display:none;">
-    <label for="n64-file" id="n64-manual" style="cursor:pointer;background:#222;color:#fff;padding:.3em .6em;border-radius:6px;">💾 Load ROM Manually</label>
-  `;
-  document.body.insertBefore(uiWrap, document.body.firstChild);
-
-  const btnClear = document.getElementById('n64-clear');
-  const inpFile  = document.getElementById('n64-file');
-  const lblMan   = document.getElementById('n64-manual');
-
-  function showError(msg){
-    console.error(msg);
-    (window.n64js && n64js.ui && typeof (typeof n64js.ui === 'function' ? n64js.ui() : n64js.ui).displayError === 'function')
-      ? (typeof n64js.ui === 'function' ? n64js.ui() : n64js.ui).displayError(msg)
-      : alert(msg);
+  // Build a direct "export=download" URL from a Drive share link.
+  function driveDirect(id) {
+    return `https://drive.google.com/uc?export=download&id=${id}`;
   }
 
-  btnClear.addEventListener('click', () => {
-    autoloadDisabled = true;
-    if (!autoloadAbort.signal.aborted) autoloadAbort.abort('clear');
-    try {
-      if (window.n64js && n64js.cpu0) n64js.cpu0 = null;
-      const c = document.querySelector('canvas');
-      if (c) { const g = c.getContext('2d'); g.fillStyle = 'black'; g.fillRect(0,0,c.width,c.height); }
-      console.log('[n64js] cleared; ready.');
-    } catch (e) { console.warn('clear failed:', e); }
-  });
-
-  lblMan.addEventListener('click', () => {
-    autoloadDisabled = true;
-    if (!autoloadAbort.signal.aborted) autoloadAbort.abort('manual-start');
-  });
-
-  inpFile.addEventListener('change', async (ev) => {
-    const f = ev.target.files?.[0];
-    if (!f) return;
-    try {
-      await ensureLoader();
-      const ui = getUi();
-      if (ui && typeof ui.loadFile === 'function') {
-        console.log('[manual] using ui.loadFile');
-        await ui.loadFile(f);
-      } else if (window.n64js && typeof n64js.loadRomAndStartRunning === 'function') {
-        console.log('[manual] using loadRomAndStartRunning');
-        const buf = await f.arrayBuffer();
-        n64js.loadRomAndStartRunning(buf);
-      } else {
-        throw new Error('No load method available on n64js.');
-      }
-      console.log('[manual] loaded', f.name);
-    } catch (e) {
-      showError('Manual load failed: ' + (e.message || String(e)));
-    } finally {
-      ev.target.value = '';
-    }
-  });
-
-  /* ================= HELPERS ================= */
-  function getUi() {
-    if (!window.n64js) return null;
-    // n64js.ui can be a function returning the UI object, or already the object
-    return (typeof n64js.ui === 'function') ? n64js.ui() : n64js.ui || null;
+  // Some public CORS proxies (best-effort; third-party and not guaranteed)
+  function proxied(url) {
+    return [
+      // Simple proxy that preserves binary responses
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      // Another commonly used proxy
+      `https://cors.isomorphic-git.org/${url}`,
+    ];
   }
 
-  async function ensureLoader(timeoutMs = 10000) {
-    const start = performance.now();
-    return new Promise((resolve, reject) => {
-      const tick = () => {
-        if (window.n64js) {
-          const ui = getUi();
-          const hasUiLoader = !!(ui && typeof ui.loadFile === 'function');
-          const hasDirect   = typeof n64js.loadRomAndStartRunning === 'function';
-          if (hasUiLoader || hasDirect) return resolve();
-        }
-        if (performance.now() - start > timeoutMs) {
-          return reject(new Error('n64js not ready: no ui.loadFile or loadRomAndStartRunning'));
-        }
-        requestAnimationFrame(tick);
-      };
-      tick();
-    });
-  }
-
+  // We’ll try, in order:
+  // 1) ?rom=... (any absolute URL you pass)
+  // 2) Direct Drive download URL (will likely fail due to CORS)
+  // 3) Drive via a couple of CORS proxies
   function buildCandidates() {
     const qs = new URLSearchParams(location.search).get('rom');
     if (qs) return [qs];
+
     const direct = driveDirect(DRIVE_ID);
     return [direct, ...proxied(direct)];
   }
 
-  async function fetchArrayBuffer(url, signal) {
-    const res = await fetch(url, { cache: 'no-store', redirect: 'follow', signal });
-    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
+  async function fetchArrayBuffer(url) {
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    // If CORS blocks, fetch may throw, or res.ok may be false, or res.type==='opaque'
+    if (!res.ok || res.type === 'opaque') {
+      throw new Error(`Fetch blocked or failed for ${url}`);
+    }
     return res.arrayBuffer();
   }
 
-  async function loadBufferPreferUi(buf, filename='autoload.z64') {
-    await ensureLoader();
-    const ui = getUi();
-    if (ui && typeof ui.loadFile === 'function') {
-      console.log('[autoload] using ui.loadFile');
-      const file = new File([new Uint8Array(buf)], filename, { type: 'application/octet-stream', lastModified: Date.now() });
-      await ui.loadFile(file);
-    } else {
-      console.log('[autoload] using loadRomAndStartRunning');
-      n64js.loadRomAndStartRunning(buf);
+  function looksLikeText(buf) {
+    const head = new Uint8Array(buf, 0, Math.min(buf.byteLength, 64));
+    // Heuristic: if most bytes are printable ASCII, it's likely HTML/text (e.g., Drive warning page)
+    let printable = 0;
+    for (let i = 0; i < head.length; i++) {
+      const b = head[i];
+      if (b === 9 || b === 10 || b === 13 || (b >= 32 && b < 127)) printable++;
     }
+    return printable > head.length * 0.8;
   }
 
-  /* ================= AUTOLOAD (cancelable) ================= */
+  async function tryLoad(url) {
+    const buf = await fetchArrayBuffer(url);
+    if (looksLikeText(buf)) {
+      // Common when Drive serves an HTML interstitial or AV warning page
+      throw new Error('Got text/HTML instead of ROM bytes (Drive interstitial/CORS).');
+    }
+    n64js.loadRomAndStartRunning(buf);
+    console.log('[autoload] loaded', url);
+  }
+
   async function autoloadRom() {
-    if (autoloadDisabled) return;
     const urls = buildCandidates();
     let lastErr;
-
-    try { await ensureLoader(); }
-    catch (e) { showError('Autoload aborted: ' + (e.message || String(e))); return; }
-
     for (const u of urls) {
-      if (autoloadDisabled) return;
-      try {
-        console.log('[autoload] fetching', u);
-        const buf = await fetchArrayBuffer(u, autoloadAbort.signal);
-        if (autoloadDisabled || autoloadAbort.signal.aborted) return;
-        console.log('[autoload] fetched', u, `(${buf.byteLength} bytes)`);
-        await loadBufferPreferUi(buf, 'gutterdome64.z64');
-        console.log('[autoload] loaded ok from', u);
-        return;
-      } catch (e) {
-        if (e.name === 'AbortError') { console.log('[autoload] aborted'); return; }
+      try { await tryLoad(u); return; }
+      catch (e) {
         lastErr = e;
         console.warn('[autoload] failed', u, e?.message || e);
       }
     }
-
-    if (!autoloadDisabled) {
-      showError('Failed to autoload ROM. Tried:\n' + urls.join('\n') +
-                (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : ''));
-    }
+    const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n') +
+                (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : '');
+    (n64js.ui && n64js.ui().displayError) ? n64js.ui().displayError(msg) : alert(msg);
   }
 
-  // Give the page a beat to finish any other startup (UI layout etc.)
-  setTimeout(autoloadRom, 0);
+  autoloadRom();
 });
 </script>
+
 
 
 
