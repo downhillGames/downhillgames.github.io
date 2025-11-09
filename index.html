@@ -686,11 +686,62 @@
       }
     </script>
 
-  <script defer>
-    document.addEventListener('DOMContentLoaded', function () {
-      n64js.init();
-    });
-  </script>
+<script defer>
+  document.addEventListener('DOMContentLoaded', async function () {
+    // Point n64js at your root so its workers/assets resolve correctly.
+    // (index.html, build/, js/, roms/ are siblings in your layout.)
+    if (typeof n64js.setRootPath === 'function') {
+      n64js.setRootPath('./');
+    }
+
+    // Initialize the emulator.
+    n64js.init();
+
+    // Pick ROM from ?rom=... or default to your file.
+    const getParam = (k) => {
+      const m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.search);
+      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+    };
+    const romPath = getParam('rom') || 'roms/gutterdome64.z64';
+
+    // Prefer the built-in helper if available (mirrors the hosted demo behavior).
+    try {
+      if (n64js.ui && typeof n64js.ui().fetchAndRun === 'function') {
+        await n64js.ui().fetchAndRun(romPath);
+        return; // done
+      }
+    } catch (e) {
+      console.warn('fetchAndRun failed/absent, falling back:', e);
+    }
+
+    // Fallback: fetch -> load buffer -> press Run.
+    try {
+      const res = await fetch(romPath);
+      if (!res.ok) throw new Error(`ROM fetch failed: ${res.status} ${res.statusText}`);
+      const buf = await res.arrayBuffer();
+
+      // Use whichever loader exists in your build.
+      const ui = n64js.ui && n64js.ui();
+      if (ui && typeof ui.loadRomBuffer === 'function') {
+        ui.loadRomBuffer(buf, romPath);
+      } else if (ui && typeof ui.loadFileFromBuffer === 'function') {
+        ui.loadFileFromBuffer(buf, romPath);
+      } else {
+        throw new Error('No UI buffer loader found (loadRomBuffer/loadFileFromBuffer).');
+      }
+
+      // Start execution (same as clicking the Run button).
+      if (typeof n64js.toggleRun === 'function') n64js.toggleRun();
+    } catch (err) {
+      console.error('Auto-play error:', err);
+      const p = document.createElement('p');
+      p.style.color = 'red';
+      p.textContent = `Could not autoload "${romPath}". Check path/CORS, and that it’s a true .z64 (big-endian).`;
+      document.getElementById('alerts')?.appendChild(p) || document.body.appendChild(p);
+    }
+  });
+</script>
+
 
 </body>
 
