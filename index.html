@@ -773,7 +773,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  /* ------------ Config: Google Drive file ------------- */
+  /* ============ CONFIG: Google Drive autoload ============ */
   const DRIVE_ID = '1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c';
   const driveDirect = id => `https://drive.google.com/uc?export=download&id=${id}`;
   const proxied = url => [
@@ -781,44 +781,11 @@ document.addEventListener('DOMContentLoaded', () => {
     `https://cors.isomorphic-git.org/${url}`,
   ];
 
-  /* ------------ State / cancel guards ------------- */
+  /* ============ STATE / CANCELLATION ============ */
   let autoloadDisabled = false;
-  const autoloadAbort = new AbortController();
+  let autoloadAbort = new AbortController();  // create new per attempt
 
-  function buildCandidates() {
-    const qs = new URLSearchParams(location.search).get('rom');
-    if (qs) return [qs];
-    const direct = driveDirect(DRIVE_ID);
-    return [direct, ...proxied(direct)];
-  }
-
-  function showError(msg){
-    console.error(msg);
-    (n64js.ui && n64js.ui().displayError) ? n64js.ui().displayError(msg) : alert(msg);
-  }
-
-  async function fetchArrayBuffer(url, signal) {
-    const res = await fetch(url, { cache: 'no-store', redirect: 'follow', signal });
-    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
-    return res.arrayBuffer();
-  }
-
-  /* ------------ Load using the SAME path as the manual UI ------------- */
-  async function loadViaUiFile(buf, filename='gutterdome64.z64') {
-    const u8 = (buf instanceof ArrayBuffer) ? new Uint8Array(buf) : buf;
-    // Create a File so n64js.ui().loadFile runs the exact manual pipeline
-    const file = new File([u8], filename, { type: 'application/octet-stream', lastModified: Date.now() });
-    if (n64js.ui && typeof n64js.ui().loadFile === 'function') {
-      await n64js.ui().loadFile(file);
-    } else if (typeof n64js.loadRomAndStartRunning === 'function') {
-      // Fallback, but the UI path is preferred
-      n64js.loadRomAndStartRunning(u8.buffer);
-    } else {
-      throw new Error('No load method available on n64js.');
-    }
-  }
-
-  /* ------------ Clear + Manual controls ------------- */
+  /* ============ UI WIRING (Clear + Manual) ============ */
   const ui = document.createElement('div');
   ui.style.margin = '0.5em 0';
   ui.innerHTML = `
@@ -831,6 +798,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnClear = document.getElementById('n64-clear');
   const inpFile  = document.getElementById('n64-file');
   const lblMan   = document.getElementById('n64-manual');
+
+  function showError(msg){
+    console.error(msg);
+    (n64js.ui && n64js.ui().displayError) ? n64js.ui().displayError(msg) : alert(msg);
+  }
 
   btnClear.addEventListener('click', () => {
     autoloadDisabled = true;
@@ -849,17 +821,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   inpFile.addEventListener('change', async (ev) => {
-    const file = ev.target.files?.[0];
-    if (!file) return;
+    const f = ev.target.files?.[0];
+    if (!f) return;
     try {
-      // Use the exact UI path even for manual file (keeps things consistent)
+      await waitForUi();
       if (n64js.ui && typeof n64js.ui().loadFile === 'function') {
-        await n64js.ui().loadFile(file);
+        console.log('[manual] using ui().loadFile');
+        await n64js.ui().loadFile(f);
       } else {
-        const buf = await file.arrayBuffer();
+        const buf = await f.arrayBuffer();
+        console.log('[manual] fallback loadRomAndStartRunning');
         n64js.loadRomAndStartRunning(buf);
       }
-      console.log('[manual] loaded', file.name);
+      console.log('[manual] loaded', f.name);
     } catch (e) {
       showError('Manual load failed: ' + (e.message || String(e)));
     } finally {
@@ -867,24 +841,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* ------------ Autoload (cancelable) ------------- */
+  /* ============ HELPERS ============ */
+  function buildCandidates() {
+    const qs = new URLSearchParams(location.search).get('rom');
+    if (qs) return [qs];
+    const direct = driveDirect(DRIVE_ID);
+    return [direct, ...proxied(direct)];
+  }
+
+  async function fetchArrayBuffer(url, signal) {
+    const res = await fetch(url, { cache: 'no-store', redirect: 'follow', signal });
+    if (!res.ok || res.type === 'opaque') throw new Error(`Fetch blocked or failed for ${url}`);
+    return res.arrayBuffer();
+  }
+
+  async function waitForUi(timeoutMs = 10000) {
+    const start = performance.now();
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        const ready = (typeof window.n64js !== 'undefined') &&
+                      n64js.ui && typeof n64js.ui === 'function' &&
+                      typeof n64js.ui().loadFile === 'function';
+        if (ready) return resolve();
+        if (performance.now() - start > timeoutMs) {
+          return reject(new Error('n64js UI not ready (loadFile missing)'));
+        }
+        setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+
+  async function loadViaUiFile(buf, filename='autoload.z64') {
+    await waitForUi();
+    const file = new File([new Uint8Array(buf)], filename, { type: 'application/octet-stream', lastModified: Date.now() });
+    if (n64js.ui && typeof n64js.ui().loadFile === 'function') {
+      console.log('[autoload] using ui().loadFile');
+      await n64js.ui().loadFile(file);
+    } else {
+      console.log('[autoload] fallback loadRomAndStartRunning');
+      n64js.loadRomAndStartRunning(buf);
+    }
+  }
+
+  /* ============ AUTOLOAD (cancelable, waits for UI) ============ */
   async function autoloadRom() {
     if (autoloadDisabled) return;
     const urls = buildCandidates();
     let lastErr;
+    try {
+      await waitForUi(); // ensure UI pipeline exists first
+    } catch (e) {
+      showError('Autoload aborted: ' + (e.message || String(e)));
+      return;
+    }
+
     for (const u of urls) {
+      if (autoloadDisabled) return;
       try {
-        if (autoloadDisabled) return;
+        console.log('[autoload] fetching', u);
         const buf = await fetchArrayBuffer(u, autoloadAbort.signal);
         if (autoloadDisabled || autoloadAbort.signal.aborted) return;
+        console.log('[autoload] fetched', u, `(${buf.byteLength} bytes)`);
         await loadViaUiFile(buf, 'gutterdome64.z64');
-        console.log('[autoload] loaded', u);
+        console.log('[autoload] loaded ok from', u);
         return;
       } catch (e) {
         if (e.name === 'AbortError') { console.log('[autoload] aborted'); return; }
-        lastErr = e; console.warn('[autoload] failed', u, e?.message || e);
+        lastErr = e;
+        console.warn('[autoload] failed', u, e?.message || e);
       }
     }
+
     if (!autoloadDisabled) {
       showError('Failed to autoload ROM. Tried:\n' + urls.join('\n') +
                 (lastErr ? '\n\nLast error: ' + (lastErr.message || String(lastErr)) : ''));
@@ -894,6 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
   autoloadRom();
 });
 </script>
+
 
 
 
