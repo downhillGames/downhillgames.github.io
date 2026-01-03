@@ -879,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try { await tryLoad(u); return; }
       catch (e) {
         lastErr = e;
-        console.warn('[autoload] failed', u, e?.message || e);
+        //console.warn('[autoload] failed', u, e?.message || e);
       }
     }
     const msg = 'Failed to autoload ROM. Tried:\n' + urls.join('\n') +
