@@ -800,8 +800,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const qs = new URLSearchParams(location.search).get('rom');
     if (qs) return [qs];
 
-    const direct = driveDirect(DRIVE_ID);
-    return [direct, ...proxied(direct)];
+		const direct = "https://drive.usercontent.google.com/u/0/uc?id=1R1zb9rPkbBL7_zzVCfiW2Cb0pUlRGr9c&export=download";
+		return ["roms/gutterdome64.z64", direct, ...proxied(direct)];
   }
 
   async function fetchArrayBuffer(url) {
