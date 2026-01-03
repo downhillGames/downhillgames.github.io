@@ -4,16 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gutterdome 64</title>
+    <style>
+    body{background:radial-gradient(1200px 600px at 20% -10%,#0e1712 0%,#0a0b0d 40%,#050607 100%);color:#e6efe6;}
+    #display{border-radius:12px;border:1px solid rgba(57,255,20,.45);
+             box-shadow:0 0 12px rgba(57,255,20,.18),0 0 36px rgba(57,255,20,.14), inset 0 0 18px rgba(57,255,20,.08);}
+  </style>
 </head>
 <body>
   <div class="container-fluid">
     <div class="row">
       <div class="col col-sm-12">
-        <h1 id="title">n64js</a></h1>
+        <h1 id="title">n64js</h1>
         <p>An n64 emulator. <a href="#" onclick="$('#info').toggle()">Info</a></p>
       </div>
     </div>
-
+</div> 
     <div class="container-fluid mt-3">
   <div class="row g-4 align-items-start">
 
@@ -999,11 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </footer>
 
 
-  <style>
-    body{background:radial-gradient(1200px 600px at 20% -10%,#0e1712 0%,#0a0b0d 40%,#050607 100%);color:#e6efe6;}
-    #display{border-radius:12px;border:1px solid rgba(57,255,20,.45);
-             box-shadow:0 0 12px rgba(57,255,20,.18),0 0 36px rgba(57,255,20,.14), inset 0 0 18px rgba(57,255,20,.08);}
-  </style>
+
   
   <template id="alert">
   <div class="alert">
