@@ -24,6 +24,14 @@
 	.toolbar small code {
 	  color: #d0ffd0 !important;
 	}
+	/* Hide ALL debugger / dev junk */
+	.debug,
+	.debug *,
+	#output,
+	#performance,
+	#adjacent-debug {
+	  display: none !important;
+	}
 
   </style>
 </head>
@@ -160,6 +168,36 @@
       </div>
       <div class="col col-sm-2" id="performance"></div>
     </div>
+	
+	<!-- How To Play -->
+<div class="card card-chrome mb-3">
+  <div class="card-header">
+    <i class="bi bi-info-circle me-1"></i> How to Play
+  </div>
+  <div class="card-body">
+    <ol class="mb-0">
+      <li>
+        Click <strong>Download ROM</strong> above and save the file.
+        <br>
+        <small class="text-muted">It will usually download to your <code>Downloads</code> folder.</small>
+      </li>
+      <li class="mt-2">
+        Click <strong>Load</strong>.
+      </li>
+      <li class="mt-2">
+        In the file picker, select <code>gutterdome64.z64</code> from your Downloads folder.
+      </li>
+      <li class="mt-2">
+        Click <strong>Run</strong> to start the game.
+      </li>
+    </ol>
+    <hr class="my-3">
+    <p class="small text-muted mb-0">
+      Tip: You only need to download the ROM once. After that, just use <strong>Load</strong>.
+    </p>
+  </div>
+</div>
+
     <div class="row">
       <div class="col col-sm-8" id="info" style="display:none">
 
