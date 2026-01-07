@@ -209,19 +209,33 @@ a:hover { color: var(--link-hover); }
   }
 }
 
+.site-header{
+  padding: 10px 12px;
+}
+
+.site-logo{
+  display:block;
+  max-height: 72px;   /* adjust: 56–80px is a good range */
+  width:auto;
+}
+
+.site-tagline{
+  margin-top: 4px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
 
   </style>
 </head>
-<div class="row">
-  <div class="col col-sm-12">
-    <img
-      src="img/logo.png"
-      alt="Downhill Games"
-      style="max-width: 320px; width: 100%; height: auto;"
-    >
-    <p class="mt-2">Independent Game Publisher</p>
+<header class="container-fluid site-header">
+  <div class="row align-items-center">
+    <div class="col-12">
+      <img class="site-logo" src="img/logo.png" alt="Downhill Games">
+      <div class="site-tagline">Independent Game Publisher</div>
+    </div>
   </div>
-</div>
+</header>
 
 <!-- Boxed Games Carousel -->
 <div class="container-fluid mb-3">
@@ -331,6 +345,22 @@ a:hover { color: var(--link-hover); }
     </div>
   </aside>
   <main class="col-12 col-lg-6">
+  
+  <div class="card card-chrome mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-2">Gutterdome 64</h2>
+    <p class="mb-2">
+      A Nintendo 64-style brawler with modern game design — fast matches, chunky hits, and arcadey chaos.
+      This page lets you play the current prototype directly in your browser using an N64 emulator.
+    </p>
+    <ul class="mb-0">
+      <li><strong>Download</strong> the ROM demo.</li>
+      <li><strong>Load</strong> it into the emulator.</li>
+      <li>Hit <strong>Run</strong> and you’re in.</li>
+    </ul>
+  </div>
+</div>
+  
 <div class="row toolbar">
       <div class="col col-sm-12">
         <div class="btn-toolbar">
