@@ -264,6 +264,60 @@
 	}
 
 
+/* AUTO = follow system preference */
+
+/* default auto -> light */
+[data-bs-theme="auto"] {
+  --page-bg: #ffffff;
+  --text: #000000;
+  --muted: #555555;
+
+  --card-bg: #e0e0e0;
+  --card-border: #c8c8c8;
+  --card-header-bg: #d2d2d2;
+  --card-header-border: #bcbcbc;
+
+  --link: #0b5ed7;
+  --link-hover: #084298;
+
+  --toolbar-btn-text: #000000;
+  --toolbar-help: #555555;
+
+  --banner-img-bg: #ffffff;
+
+  --banner-cap-bg: rgba(0, 0, 0, 0.6);
+  --banner-cap-border: rgba(255,255,255,0.18);
+  --banner-title: #ffffff;
+  --banner-sub: rgba(255,255,255,0.88);
+}
+
+/* if system prefers dark, auto -> dark */
+@media (prefers-color-scheme: dark) {
+  [data-bs-theme="auto"] {
+    --page-bg: #000000;
+    --text: #ffffff;
+    --muted: #bbbbbb;
+
+    --card-bg: #111111;
+    --card-border: rgba(255,255,255,0.12);
+    --card-header-bg: rgba(255,255,255,0.06);
+    --card-header-border: rgba(255,255,255,0.12);
+
+    --link: #7ab7ff;
+    --link-hover: #b9dcff;
+
+    --toolbar-btn-text: #ffffff;
+    --toolbar-help: #d0ffd0;
+
+    --banner-img-bg: #000000;
+    --banner-cap-bg: rgba(0, 0, 0, 0.6);
+    --banner-cap-border: rgba(255,255,255,0.12);
+    --banner-title: #ffffff;
+    --banner-sub: rgba(255,255,255,0.85);
+  }
+}
+
+
 
   </style>
 </head>
