@@ -23,6 +23,55 @@
 
 }
 
+
+/* =========================
+   TEXT COLOR BY THEME
+   ========================= */
+
+/* Light mode text */
+[data-bs-theme="light"] body {
+  color: #000000;
+}
+
+/* Dark mode text */
+[data-bs-theme="dark"] body {
+  color: #ffffff;
+}
+
+/* Muted text tuning */
+[data-bs-theme="light"] .text-muted {
+  color: #555555 !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+  color: #bbbbbb !important;
+}
+
+
+/* =========================
+   CARD / SIDEBAR STYLING
+   ========================= */
+
+/* Light mode: darker cards for contrast */
+[data-bs-theme="light"] .card,
+[data-bs-theme="light"] .card-chrome,
+[data-bs-theme="light"] .sidebar .card {
+  background-color: #e0e0e0;
+  border-color: #c8c8c8;
+}
+
+/* Optional: card headers slightly darker */
+[data-bs-theme="light"] .card-header {
+  background-color: #d2d2d2;
+  border-bottom: 1px solid #bcbcbc;
+}
+
+/* Dark mode: leave as-is (but enforce text color safety) */
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card-header {
+  color: #ffffff;
+}
+
     #display{border-radius:12px;border:1px solid rgba(57,255,20,.45);
              box-shadow:0 0 12px rgba(57,255,20,.18),0 0 36px rgba(57,255,20,.14), inset 0 0 18px rgba(57,255,20,.08);}
 			 
