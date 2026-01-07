@@ -9,170 +9,206 @@
 		  crossorigin="anonymous">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
-	/* =========================
-	   BACKGROUND BY THEME
-	   ========================= */
+/* =========================
+   THEME TOKENS (LIGHT/DARK)
+   ========================= */
 
-	/* Light mode */
-	[data-bs-theme="light"] body {
-	  background: #ffffff;
-	  color: #000000;
-	}
+[data-bs-theme="light"] {
+  --page-bg: #ffffff;
+  --text: #000000;
+  --muted: #555555;
 
-	/* Dark mode */
-	[data-bs-theme="dark"] body {
-	  background: #000000;
-	  color: #ffffff;
-	}
+  --card-bg: #e0e0e0;        /* darker in light mode (your request) */
+  --card-border: #c8c8c8;
+  --card-header-bg: #d2d2d2;
+  --card-header-border: #bcbcbc;
 
+  --link: #0b5ed7;
+  --link-hover: #084298;
 
-	/* =========================
-	   TEXT COLOR TUNING
-	   ========================= */
+  --toolbar-btn-text: #000000;
+  --toolbar-help: #555555;
 
-	[data-bs-theme="light"] .text-muted {
-	  color: #555555 !important;
-	}
+  --banner-img-bg: #ffffff;
+  --banner-cap-bg: rgba(0, 0, 0, 0.08);
+  --banner-cap-border: rgba(0, 0, 0, 0.12);
+  --banner-title: #000000;
+  --banner-sub: rgba(0, 0, 0, 0.75);
+}
 
-	[data-bs-theme="dark"] .text-muted {
-	  color: #bbbbbb !important;
-	}
+[data-bs-theme="dark"] {
+  --page-bg: #000000;
+  --text: #ffffff;
+  --muted: #bbbbbb;
 
+  --card-bg: #111111;
+  --card-border: rgba(255,255,255,0.12);
+  --card-header-bg: rgba(255,255,255,0.06);
+  --card-header-border: rgba(255,255,255,0.12);
 
-	/* =========================
-	   CARD / SIDEBAR STYLING
-	   ========================= */
+  --link: #7ab7ff;
+  --link-hover: #b9dcff;
 
-	/* Light mode: darker cards for contrast */
-	[data-bs-theme="light"] .card,
-	[data-bs-theme="light"] .card-chrome,
-	[data-bs-theme="light"] .sidebar .card {
-	  background-color: #e0e0e0;
-	  border-color: #c8c8c8;
-	}
+  --toolbar-btn-text: #ffffff;
+  --toolbar-help: #d0ffd0;
 
-	/* Card headers slightly darker in light mode */
-	[data-bs-theme="light"] .card-header {
-	  background-color: #d2d2d2;
-	  border-bottom: 1px solid #bcbcbc;
-	}
-
-	/* Dark mode: preserve existing look, enforce text color */
-	[data-bs-theme="dark"] .card,
-	[data-bs-theme="dark"] .card-header {
-	  color: #ffffff;
-	}
+  --banner-img-bg: #000000;
+  --banner-cap-bg: rgba(0, 0, 0, 0.6);
+  --banner-cap-border: rgba(255,255,255,0.12);
+  --banner-title: #ffffff;
+  --banner-sub: rgba(255,255,255,0.85);
+}
 
 
-	/* =========================
-	   EMULATOR DISPLAY
-	   ========================= */
+/* =========================
+   GLOBAL BASE
+   ========================= */
 
-	#display {
-	  border-radius: 12px;
-	  border: 1px solid rgba(57,255,20,.45);
-	  box-shadow:
-		0 0 12px rgba(57,255,20,.18),
-		0 0 36px rgba(57,255,20,.14),
-		inset 0 0 18px rgba(57,255,20,.08);
-	}
+body {
+  background: var(--page-bg);
+  color: var(--text);
+}
 
+/* Text helpers */
+.text-muted { color: var(--muted) !important; }
 
-	/* =========================
-	   TOOLBAR FIXES
-	   ========================= */
-
-	/* Toolbar text by theme */
-	[data-bs-theme="light"] .toolbar .btn,
-	[data-bs-theme="light"] .toolbar .btn i {
-	  color: #000000 !important;
-	}
-
-	[data-bs-theme="dark"] .toolbar .btn,
-	[data-bs-theme="dark"] .toolbar .btn i {
-	  color: #ffffff !important;
-	}
+/* Links (Bootstrap sometimes sets these differently per component) */
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
 
 
-	/* Fix small helper text */
-	.toolbar small,
-	.toolbar small code {
-	  color: #d0ffd0 !important;
-	}
+/* =========================
+   CARD / SIDEBAR STYLING
+   ========================= */
+
+.card,
+.card-chrome,
+.sidebar .card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text);
+}
+
+.card-header {
+  background-color: var(--card-header-bg);
+  border-bottom: 1px solid var(--card-header-border);
+  color: var(--text);
+}
+
+/* List group items inside cards (Dev Logs etc.) */
+.list-group-item {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text);
+}
+
+.list-group-item:hover {
+  filter: brightness(0.96);
+}
 
 
-	/* =========================
-	   DEBUG / DEV HIDING
-	   ========================= */
+/* =========================
+   EMULATOR DISPLAY
+   ========================= */
 
-	.debug,
-	.debug *,
-	#output,
-	#performance,
-	#adjacent-debug {
-	  display: none !important;
-	}
-
-
-	/* =========================
-	   BANNER / CAROUSEL
-	   ========================= */
-
-	.banner-card {
-	  padding: 0;
-	  overflow: hidden;
-	  max-height: 260px;
-	}
-
-	.banner-img {
-	  height: 260px;
-	  width: 100%;
-	  object-fit: contain;
-	  background: #000;
-	  filter: saturate(1.05) contrast(1.05);
-	}
-
-	.carousel-caption {
-	  bottom: 0.75rem;
-	  pointer-events: none;
-	}
-
-	.banner-cap {
-	  display: inline-block;
-	  padding: 0.5rem 0.75rem;
-	  border-radius: 10px;
-	  background: rgba(0, 0, 0, 0.6);
-	  backdrop-filter: blur(6px);
-	  border: 1px solid rgba(255,255,255,0.12);
-	}
-
-	.banner-title {
-	  font-weight: 700;
-	  font-size: 1rem;
-	  color: #ffffff;
-	}
-
-	.banner-sub {
-	  font-size: 0.85rem;
-	  color: rgba(255,255,255,0.85);
-	}
-
-	.banner-link {
-	  display: block;
-	}
+#display {
+  border-radius: 12px;
+  border: 1px solid rgba(57,255,20,.45);
+  box-shadow:
+    0 0 12px rgba(57,255,20,.18),
+    0 0 36px rgba(57,255,20,.14),
+    inset 0 0 18px rgba(57,255,20,.08);
+}
 
 
-	/* =========================
-	   MOBILE TWEAKS
-	   ========================= */
+/* =========================
+   TOOLBAR FIXES
+   ========================= */
 
-	@media (max-width: 576px) {
-	  .banner-card,
-	  .banner-img {
-		max-height: 190px;
-		height: 190px;
-	  }
-	}
+/* Toolbar button text/icon color */
+.toolbar .btn,
+.toolbar .btn i {
+  color: var(--toolbar-btn-text) !important;
+}
+
+/* Toolbar helper text */
+.toolbar small,
+.toolbar small code {
+  color: var(--toolbar-help) !important;
+}
+
+
+/* =========================
+   DEBUG / DEV HIDING
+   ========================= */
+
+.debug,
+.debug *,
+#output,
+#performance,
+#adjacent-debug {
+  display: none !important;
+}
+
+
+/* =========================
+   BANNER / CAROUSEL
+   ========================= */
+
+.banner-card {
+  padding: 0;
+  overflow: hidden;
+  max-height: 260px;
+}
+
+.banner-img {
+  height: 260px;
+  width: 100%;
+  object-fit: contain;
+  background: var(--banner-img-bg);
+  filter: saturate(1.05) contrast(1.05);
+}
+
+.carousel-caption {
+  bottom: 0.75rem;
+  pointer-events: none;
+}
+
+.banner-cap {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: var(--banner-cap-bg);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--banner-cap-border);
+}
+
+.banner-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--banner-title);
+}
+
+.banner-sub {
+  font-size: 0.85rem;
+  color: var(--banner-sub);
+}
+
+.banner-link { display: block; }
+
+
+/* =========================
+   MOBILE TWEAKS
+   ========================= */
+
+@media (max-width: 576px) {
+  .banner-card,
+  .banner-img {
+    max-height: 190px;
+    height: 190px;
+  }
+}
+
 
   </style>
 </head>
