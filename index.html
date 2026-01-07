@@ -82,11 +82,17 @@
 	   TOOLBAR FIXES
 	   ========================= */
 
-	/* Force toolbar buttons + icons to white */
-	.toolbar .btn,
-	.toolbar .btn i {
+	/* Toolbar text by theme */
+	[data-bs-theme="light"] .toolbar .btn,
+	[data-bs-theme="light"] .toolbar .btn i {
+	  color: #000000 !important;
+	}
+
+	[data-bs-theme="dark"] .toolbar .btn,
+	[data-bs-theme="dark"] .toolbar .btn i {
 	  color: #ffffff !important;
 	}
+
 
 	/* Fix small helper text */
 	.toolbar small,
