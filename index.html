@@ -11,7 +11,16 @@
     <style>
   
 	body {
-  background: #A3A3A3; /* medium light gray */
+		  /* Light mode */
+		[data-bs-theme="light"] body {
+		  background: #ffffff;
+		}
+
+		/* Dark mode */
+		[data-bs-theme="dark"] body {
+		  background: #000000;
+		}
+
 }
 
     #display{border-radius:12px;border:1px solid rgba(57,255,20,.45);
