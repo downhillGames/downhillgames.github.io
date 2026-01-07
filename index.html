@@ -210,20 +210,22 @@ a:hover { color: var(--link-hover); }
 }
 
 .site-header{
-  padding: 10px 12px;
+  padding: 12px 14px 8px;   /* tighter vertical padding */
 }
 
 .site-logo{
-  display:block;
-  max-height: 72px;   /* adjust: 56–80px is a good range */
-  width:auto;
+  display: block;
+  max-height: 96px;         /* 🔼 bigger logo (was ~72) */
+  width: auto;
 }
 
 .site-tagline{
-  margin-top: 4px;
-  font-size: 0.95rem;
+  margin-top: -4px;        /* 🔽 tuck text closer to logo */
+  font-size: 0.9rem;
+  line-height: 1.1;
   color: var(--muted);
 }
+
 
 
   </style>
