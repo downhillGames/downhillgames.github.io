@@ -32,6 +32,53 @@
 	#adjacent-debug {
 	  display: none !important;
 	}
+/* Boxed carousel card */
+.banner-card {
+  padding: 0;
+  overflow: hidden;
+  max-height: 260px;
+}
+
+/* Image sizing */
+.banner-img {
+  height: 260px;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.05);
+}
+
+/* Caption styling */
+.carousel-caption {
+  bottom: 0.75rem;
+}
+
+.banner-cap {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.banner-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.banner-sub {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Mobile tweak */
+@media (max-width: 576px) {
+  .banner-card,
+  .banner-img {
+    max-height: 190px;
+    height: 190px;
+  }
+}
 
   </style>
 </head>
