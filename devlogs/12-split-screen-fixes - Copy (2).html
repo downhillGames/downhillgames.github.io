@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dev Log #12 – Split-screen Convergence Fixes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap (same version as main site) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background: var(--page-bg, #fff);
+      color: var(--text, #000);
+    }
+
+    .devlog-container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .devlog-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .devlog-meta {
+      font-size: 0.9rem;
+      color: #777;
+    }
+
+    .devlog-content p {
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .devlog-content img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .back-link {
+      margin-top: 2.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="devlog-container">
+
+    <!-- Header -->
+    <header class="devlog-header">
+      <h1 class="h3">Dev Log #12 – Split-screen Convergence Fixes</h1>
+      <div class="devlog-meta">
+        Posted on March 2026 • Gutterdome 64
+      </div>
+    </header>
+
+    <!-- Content -->
+    <article class="devlog-content">
+
+      <p>
+        This update focused on fixing long-standing issues with split-screen camera
+        convergence during high-speed brawls.
+      </p>
+
+      <p>
+        Previously, players could drift out of camera bounds during knockback-heavy
+        interactions. The fix involved tightening camera anchors and reworking the
+        distance weighting logic.
+      </p>
+
+      <p>
+        The result is a much more readable match flow, especially during four-player
+        chaos.
+      </p>
+
+      <!-- Example image -->
+      <!--
+      <img src="../img/devlogs/splitscreen-fix.png" alt="Split screen convergence fix">
+      -->
+
+      <p>
+        This system will continue to evolve as more stage types are introduced.
+      </p>
+
+    </article>
+
+    <!-- Back -->
+    <div class="back-link">
+      <a href="/" class="btn btn-outline-secondary">← Back to Gutterdome 64</a>
+    </div>
+
+  </main>
+
+</body>
+</html>
